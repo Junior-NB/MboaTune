@@ -12,10 +12,11 @@ import { Spacing, BorderRadius, FontSize } from '../../theme/spacing';
 import { useLibraryStore } from '../../store/libraryStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
-import { mockAlbums, mockArtists } from '../../data/mockData';
+import { mockAlbums, mockArtists, mockTracks } from '../../data/mockData';
 import ProfileDrawerModal from '../../components/ProfileDrawerModal';
 import { scanLocalMusic } from '../../utils/localScanner';
 import type { Track } from '../../types/database';
+import TrackOptionsModal from '../../components/TrackOptionsModal';
 import { useNavigation } from '@react-navigation/native';
 
 type FilterTab = 'Playlists' | 'Albums' | 'Artistes' | 'Sur mon tel';
@@ -26,8 +27,9 @@ export default function LibraryScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [localTracks, setLocalTracks] = useState<Track[]>([]);
-  const { playlists, createPlaylist, likedTracks } = useLibraryStore();
+  const [selectedTracksToCreate, setSelectedTracksToCreate] = useState<string[]>([]);
+  const [optionsTrack, setOptionsTrack] = useState<Track | null>(null);
+  const { playlists, createPlaylist, likedTracks, importedTracks, addImportedTrack, removeImportedTrack } = useLibraryStore();
   const { playTrack } = usePlayerStore();
   const { user, profile } = useAuthStore();
 
@@ -40,11 +42,9 @@ export default function LibraryScreen() {
   const loadLocalMusic = async () => {
     try {
       const scanned = await scanLocalMusic();
-      setLocalTracks(prev => {
-        const importedIds = prev.filter(t => t.id.startsWith('local-import-')).map(t => t.id);
-        const imported = prev.filter(t => importedIds.includes(t.id));
-        return [...scanned, ...imported];
-      });
+      const importedIds = importedTracks.filter(t => t.id.startsWith('local-import-')).map(t => t.id);
+      const newScanned = scanned.filter(t => !importedIds.includes(t.id));
+      newScanned.forEach(t => addImportedTrack(t));
     } catch {}
   };
 
@@ -77,7 +77,7 @@ export default function LibraryScreen() {
         }
       }));
 
-      setLocalTracks(prev => [...prev, ...newLocalTracks as any]);
+      newLocalTracks.forEach(t => addImportedTrack(t as any));
     } catch (err) {
       if (isCancel(err)) {
         // annulé
@@ -87,12 +87,29 @@ export default function LibraryScreen() {
     }
   };
 
-  const handleCreatePlaylist = () => {
+  const handleCreatePlaylist = async () => {
     if (!user || !newPlaylistName.trim()) return;
-    createPlaylist(newPlaylistName.trim(), user.id);
+    const res = await createPlaylist(newPlaylistName.trim(), user.id);
+    if (res.data && selectedTracksToCreate.length > 0) {
+      for (const trackId of selectedTracksToCreate) {
+        await useLibraryStore.getState().addTrackToPlaylist(res.data.id, trackId, user.id);
+      }
+    }
     setNewPlaylistName('');
+    setSelectedTracksToCreate([]);
     setShowCreateModal(false);
   };
+
+  const toggleSelectTrackToCreate = (trackId: string) => {
+    setSelectedTracksToCreate(prev =>
+      prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]
+    );
+  };
+
+  const availableTracksForPlaylist = [
+    ...mockTracks.filter(t => likedTracks.includes(t.id)),
+    ...importedTracks
+  ];
 
   const tabs: FilterTab[] = ['Playlists', 'Albums', 'Artistes', 'Sur mon tel'];
 
@@ -171,7 +188,7 @@ export default function LibraryScreen() {
                 onPress={() => (navigation as any).navigate('LikedTracks')}
               >
                 <LinearGradient
-                  colors={['#450af5', '#8e8ee5']}
+                  colors={[Colors.primary, '#8e8ee5']}
                   style={styles.likedCover}
                 >
                   <Icon name="heart" size={20} color="#fff" />
@@ -179,7 +196,7 @@ export default function LibraryScreen() {
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemTitle}>Titres likés</Text>
                   <View style={styles.itemMeta}>
-                    <Icon name="push-outline" size={12} color="#1DB954" />
+                    <Icon name="push-outline" size={12} color={Colors.primary} />
                     <Text style={styles.itemSubtitle}>
                       Playlist · {likedTracks?.length || 0} titres
                     </Text>
@@ -258,7 +275,7 @@ export default function LibraryScreen() {
               {/* Boutons d'action */}
               <View style={styles.localHeader}>
                 <Text style={styles.localCount}>
-                  {localTracks.length} titre{localTracks.length !== 1 ? 's' : ''} trouvé{localTracks.length !== 1 ? 's' : ''}
+                  {importedTracks.length} titre{importedTracks.length !== 1 ? 's' : ''} trouvé{importedTracks.length !== 1 ? 's' : ''}
                 </Text>
                 <View style={styles.localActions}>
                   <TouchableOpacity
@@ -277,7 +294,7 @@ export default function LibraryScreen() {
                 </View>
               </View>
 
-              {localTracks.length === 0 ? (
+              {importedTracks.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Icon name="phone-portrait-outline" size={48} color="#535353" />
                   <Text style={styles.emptyTitle}>Aucun titre sur cet appareil</Text>
@@ -289,12 +306,12 @@ export default function LibraryScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                localTracks.map(track => (
+                importedTracks.map(track => (
                   <TouchableOpacity
                     key={track.id}
                     style={styles.listItem}
                     activeOpacity={0.7}
-                    onPress={() => playTrack(track, localTracks)}
+                    onPress={() => playTrack(track, importedTracks)}
                   >
                     <View style={styles.localCover}>
                       <Icon name="musical-notes" size={20} color="#b3b3b3" />
@@ -306,9 +323,10 @@ export default function LibraryScreen() {
                       <Text style={styles.itemSubtitle}>Fichier local</Text>
                     </View>
                     <TouchableOpacity
-                      onPress={() => playTrack(track, localTracks)}
+                      onPress={() => setOptionsTrack(track)}
+                      style={{ padding: 8 }}
                     >
-                      <Icon name="play-circle" size={28} color="#1DB954" />
+                      <Icon name="ellipsis-vertical" size={20} color="#b3b3b3" />
                     </TouchableOpacity>
                   </TouchableOpacity>
                 ))
@@ -321,21 +339,49 @@ export default function LibraryScreen() {
         <Modal visible={showCreateModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Nommez votre playlist</Text>
+              <Text style={styles.modalTitle}>Créer une playlist</Text>
               <TextInput
                 style={styles.modalInput}
                 value={newPlaylistName}
                 onChangeText={setNewPlaylistName}
-                placeholder="Ma playlist"
+                placeholder="Nom de la playlist"
                 placeholderTextColor="#535353"
                 autoFocus
               />
+              
+              <Text style={{color: '#fff', marginTop: 16, marginBottom: 8, fontWeight: 'bold'}}>
+                Ajouter des titres (optionnel)
+              </Text>
+              <ScrollView style={{maxHeight: 200, width: '100%'}}>
+                {availableTracksForPlaylist.length === 0 ? (
+                  <Text style={{color: '#b3b3b3', fontSize: 13}}>Aucun titre liké ou importé disponible.</Text>
+                ) : (
+                  availableTracksForPlaylist.map(t => {
+                    const isSelected = selectedTracksToCreate.includes(t.id);
+                    return (
+                      <TouchableOpacity 
+                        key={t.id} 
+                        style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12}}
+                        onPress={() => toggleSelectTrackToCreate(t.id)}
+                      >
+                        <Icon name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={24} color={isSelected ? Colors.primary : '#b3b3b3'} />
+                        <View style={{flex: 1}}>
+                          <Text style={{color: '#fff', fontSize: 14}} numberOfLines={1}>{t.title}</Text>
+                          <Text style={{color: '#b3b3b3', fontSize: 12}} numberOfLines={1}>{t.artist?.name || 'Inconnu'}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.modalCancelBtn}
                   onPress={() => {
                     setShowCreateModal(false);
                     setNewPlaylistName('');
+                    setSelectedTracksToCreate([]);
                   }}
                 >
                   <Text style={styles.modalCancelText}>Annuler</Text>
@@ -360,6 +406,13 @@ export default function LibraryScreen() {
         visible={showProfileDrawer}
         onClose={() => setShowProfileDrawer(false)}
       />
+
+      <TrackOptionsModal
+        track={optionsTrack}
+        visible={!!optionsTrack}
+        onClose={() => setOptionsTrack(null)}
+        onDeleteImported={removeImportedTrack}
+      />
     </SafeAreaView>
   );
 }
@@ -368,7 +421,7 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
@@ -431,7 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
   tabActive: {
-    backgroundColor: '#1DB954',
+    backgroundColor: Colors.primary,
   },
   tabText: {
     color: '#fff',
@@ -478,7 +531,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#282828',
+    backgroundColor: Colors.surfaceLight,
   },
   likedCover: {
     width: 56,
@@ -491,7 +544,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 4,
-    backgroundColor: '#282828',
+    backgroundColor: Colors.surfaceLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -544,7 +597,7 @@ const styles = StyleSheet.create({
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1DB954',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -602,7 +655,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: '#282828',
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 8,
     padding: 24,
     width: '85%',
@@ -637,7 +690,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalCreateBtn: {
-    backgroundColor: '#1DB954',
+    backgroundColor: Colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 32,
     borderRadius: 24,

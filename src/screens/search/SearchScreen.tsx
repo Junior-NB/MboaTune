@@ -14,6 +14,7 @@ import { mockCategories, mockTracks } from '../../data/mockData';
 import ProfileDrawerModal from '../../components/ProfileDrawerModal';
 import { useSearchStore } from '../../store/searchStore';
 import type { Track } from '../../types/database';
+import TrackOptionsModal from '../../components/TrackOptionsModal';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 2;
@@ -25,8 +26,11 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [optionsTrack, setOptionsTrack] = useState<Track | null>(null);
   const { profile } = useAuthStore();
   const { playTrack } = usePlayerStore();
+  const searchStore = useSearchStore();
+  const recentSearches = searchStore?.recentSearches || [];
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -46,7 +50,7 @@ export default function SearchScreen() {
     if (localResults.length > 0) {
       setSearchResults(localResults);
       setIsSearching(false);
-      useSearchStore.getState().addRecentSearch(query);
+      searchStore?.addRecentSearch?.(query);
       return;
     }
 
@@ -60,7 +64,7 @@ export default function SearchScreen() {
     if (data && !error) {
       setSearchResults(data as Track[]);
       if (data.length > 0) {
-        useSearchStore.getState().addRecentSearch(query);
+        searchStore?.addRecentSearch?.(query);
       }
     }
     setIsSearching(false);
@@ -79,7 +83,7 @@ export default function SearchScreen() {
               onPress={() => setShowProfileDrawer(true)}
             >
               <Text style={styles.avatarText}>
-                {profile?.display_name?.[0]?.toUpperCase() || 'U'}
+                {profile?.username?.[0]?.toUpperCase() || 'U'}
               </Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Rechercher</Text>
@@ -127,6 +131,7 @@ export default function SearchScreen() {
                     style={styles.resultItem}
                     activeOpacity={0.7}
                     onPress={() => playTrack(track, searchResults)}
+                    onLongPress={() => setOptionsTrack(track)}
                   >
                     <Image
                       source={{ uri: track.album?.cover_path }}
@@ -140,6 +145,9 @@ export default function SearchScreen() {
                         Titre · {track.artist?.name || 'Artiste inconnu'}
                       </Text>
                     </View>
+                    <TouchableOpacity onPress={() => setOptionsTrack(track)} style={{ padding: 8 }}>
+                      <Icon name="ellipsis-vertical" size={20} color="#b3b3b3" />
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 ))
               )}
@@ -147,15 +155,15 @@ export default function SearchScreen() {
           ) : (
             /* ─── VUE PAR DÉFAUT : RECHERCHES RÉCENTES + CATÉGORIES ─── */
             <>
-              {useSearchStore().recentSearches.length > 0 && (
+              {(recentSearches || []).length > 0 && (
                 <View style={styles.recentSearchesContainer}>
                   <View style={styles.recentSearchesHeader}>
                     <Text style={styles.sectionTitle}>Recherches récentes</Text>
-                    <TouchableOpacity onPress={() => useSearchStore.getState().clearRecentSearches()}>
+                    <TouchableOpacity onPress={() => searchStore?.clearRecentSearches?.()}>
                       <Text style={styles.clearText}>Effacer</Text>
                     </TouchableOpacity>
                   </View>
-                  {useSearchStore().recentSearches.map((term, index) => (
+                  {(recentSearches || []).map((term, index) => (
                     <TouchableOpacity
                       key={index}
                       style={styles.recentSearchItem}
@@ -163,7 +171,7 @@ export default function SearchScreen() {
                     >
                       <Icon name="time-outline" size={24} color="#b3b3b3" />
                       <Text style={styles.recentSearchText}>{term}</Text>
-                      <TouchableOpacity onPress={() => useSearchStore.getState().removeRecentSearch(term)}>
+                      <TouchableOpacity onPress={() => searchStore?.removeRecentSearch?.(term)}>
                         <Icon name="close" size={20} color="#b3b3b3" />
                       </TouchableOpacity>
                     </TouchableOpacity>
@@ -195,6 +203,12 @@ export default function SearchScreen() {
       <ProfileDrawerModal
         visible={showProfileDrawer}
         onClose={() => setShowProfileDrawer(false)}
+      />
+
+      <TrackOptionsModal
+        track={optionsTrack}
+        visible={!!optionsTrack}
+        onClose={() => setOptionsTrack(null)}
       />
     </SafeAreaView>
   );

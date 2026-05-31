@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, StatusBar,
+  View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, StatusBar, ActivityIndicator
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from '@react-native-community/slider';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import TrackPlayer, { useProgress } from 'react-native-track-player';
+import Animated, { FadeInDown, FadeIn, SlideInDown } from 'react-native-reanimated';
 import { usePlayerStore } from '../../store/playerStore';
 import { useLibraryStore } from '../../store/libraryStore';
 import { useAuthStore } from '../../store/authStore';
+import { useDownloadStore } from '../../store/downloadStore';
 import { Colors } from '../../theme/colors';
 import { Spacing, BorderRadius, FontSize, IconSize } from '../../theme/spacing';
 
@@ -25,13 +27,26 @@ export default function PlayerScreen() {
   } = usePlayerStore();
   const { isTrackLiked, toggleLikeTrack } = useLibraryStore();
   const { user } = useAuthStore();
+  const { downloadTrack, removeDownload, isDownloaded, isDownloading } = useDownloadStore();
   const progress = useProgress(200);
 
   const liked = currentTrack ? isTrackLiked(currentTrack.id) : false;
+  const downloaded = currentTrack ? isDownloaded(currentTrack.id) : false;
+  const downloading = currentTrack ? isDownloading[currentTrack.id] : false;
 
   const handleToggleLike = () => {
     if (currentTrack && user) {
       toggleLikeTrack(currentTrack.id, user.id);
+    }
+  };
+
+  const handleDownload = () => {
+    if (currentTrack) {
+      if (downloaded) {
+        removeDownload(currentTrack.id);
+      } else {
+        downloadTrack(currentTrack);
+      }
     }
   };
 
@@ -56,30 +71,27 @@ export default function PlayerScreen() {
 
   return (
     <LinearGradient
-      colors={['#535353', '#1a1a1a', '#121212']}
-      locations={[0, 0.5, 1]}
+      colors={['#281E15', '#0F1511', '#0F1511']}
+      locations={[0, 0.4, 1]}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* ─── HEADER ─── */}
-      <View style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icon name="chevron-down" size={28} color="#fff" />
+          <Icon name="chevron-down" size={28} color={Colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerLabel}>LECTURE EN COURS</Text>
-          <Text style={styles.headerSource} numberOfLines={1}>
-            {currentTrack.album?.title || 'Ma playlist'}
-          </Text>
+          <Text style={styles.headerLabel}>EN ÉCOUTE</Text>
         </View>
         <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icon name="ellipsis-horizontal" size={22} color="#fff" />
+          <Icon name="ellipsis-horizontal" size={22} color={Colors.textSecondary} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {/* ─── POCHETTE ─── */}
-      <View style={styles.artworkContainer}>
+      <Animated.View entering={FadeIn.duration(500).delay(200)} style={styles.artworkContainer}>
         {hasLocalCover ? (
           <View style={styles.artworkPlaceholder}>
             <Icon name="musical-notes" size={80} color="#535353" />
@@ -90,75 +102,88 @@ export default function PlayerScreen() {
             style={styles.artwork}
           />
         )}
-      </View>
+      </Animated.View>
 
       {/* ─── INFOS ─── */}
-      <View style={styles.infoRow}>
+      <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.infoRow}>
         <View style={styles.infoText}>
           <Text style={styles.title} numberOfLines={1}>{currentTrack.title}</Text>
           <Text style={styles.artist} numberOfLines={1}>
             {currentTrack.artist?.name || 'Artiste inconnu'}
           </Text>
         </View>
-        <TouchableOpacity onPress={handleToggleLike}>
-          <Icon
-            name={liked ? 'heart' : 'heart-outline'}
-            size={26}
-            color={liked ? '#1DB954' : '#fff'}
-          />
-        </TouchableOpacity>
-      </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity onPress={handleDownload}>
+            {downloading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Icon
+                name={downloaded ? 'checkmark-circle' : 'download-outline'}
+                size={26}
+                color={downloaded ? Colors.primary : Colors.textPrimary}
+              />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleToggleLike}>
+            <Icon
+              name={liked ? 'heart' : 'heart-outline'}
+              size={26}
+              color={liked ? Colors.primary : Colors.textPrimary}
+            />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
       {/* ─── BARRE DE PROGRESSION ─── */}
-      <View style={styles.progressContainer}>
+      <Animated.View entering={FadeInDown.duration(400).delay(400)} style={styles.progressContainer}>
         <Slider
           style={styles.slider}
           value={progress.position}
           minimumValue={0}
           maximumValue={progress.duration || 1}
           onSlidingComplete={(value) => seekTo(value)}
-          minimumTrackTintColor="#fff"
-          maximumTrackTintColor="rgba(255,255,255,0.2)"
-          thumbTintColor="#fff"
+          minimumTrackTintColor={Colors.primary}
+          maximumTrackTintColor="rgba(255,255,255,0.1)"
+          thumbTintColor={Colors.primary}
         />
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatTime(progress.position)}</Text>
           <Text style={styles.timeText}>{formatTime(progress.duration)}</Text>
         </View>
-      </View>
+      </Animated.View>
 
       {/* ─── CONTRÔLES ─── */}
-      <View style={styles.controls}>
+      <Animated.View entering={FadeInDown.duration(400).delay(500)} style={styles.controls}>
         <TouchableOpacity onPress={toggleShuffle}>
           <Icon
             name="shuffle"
             size={24}
-            color={isShuffle ? '#1DB954' : '#b3b3b3'}
+            color={isShuffle ? Colors.primary : Colors.textMuted}
           />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={skipToPrevious}>
-          <Icon name="play-skip-back" size={32} color="#fff" />
+          <Icon name="play-skip-back" size={32} color={Colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
           <Icon
             name={isPlaying ? 'pause' : 'play'}
             size={36}
-            color="#000"
+            color="#121212"
             style={!isPlaying ? { marginLeft: 3 } : undefined}
           />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={skipToNext}>
-          <Icon name="play-skip-forward" size={32} color="#fff" />
+          <Icon name="play-skip-forward" size={32} color={Colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={toggleRepeat} style={{ position: 'relative' }}>
           <Icon
             name="repeat"
             size={24}
-            color={repeatMode !== 'off' ? '#1DB954' : '#b3b3b3'}
+            color={repeatMode !== 'off' ? Colors.primary : Colors.textMuted}
           />
           {repeatMode === 'track' && (
             <View style={styles.repeatBadge}>
@@ -166,20 +191,24 @@ export default function PlayerScreen() {
             </View>
           )}
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
-      {/* ─── BARRE DU BAS ─── */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity>
-          <Icon name="desktop-outline" size={18} color="#b3b3b3" />
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <Icon name="share-social-outline" size={18} color="#b3b3b3" />
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <Icon name="list" size={18} color="#b3b3b3" />
-        </TouchableOpacity>
-      </View>
+      {/* ─── PROCHAINS TITRES ─── */}
+      <Animated.View entering={SlideInDown.duration(500).delay(600)} style={styles.upNextContainer}>
+        <View style={styles.upNextHeader}>
+          <Icon name="musical-notes" size={16} color={Colors.textSecondary} />
+          <Text style={styles.upNextTitle}>PROCHAINS TITRES</Text>
+        </View>
+        <View style={styles.upNextCard}>
+          <View style={styles.upNextIconBox}>
+            <Icon name="musical-note" size={24} color="#fff" />
+          </View>
+          <View style={styles.upNextInfo}>
+            <Text style={styles.upNextTrackName}>Titre suivant</Text>
+            <Text style={styles.upNextTrackArtist}>Artiste suivant</Text>
+          </View>
+        </View>
+      </Animated.View>
     </LinearGradient>
   );
 }
@@ -201,7 +230,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   headerCenter: {
     alignItems: 'center',
@@ -209,16 +238,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   headerLabel: {
-    color: '#b3b3b3',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-  },
-  headerSource: {
-    color: '#fff',
-    fontSize: 13,
+    color: Colors.textSecondary,
+    fontSize: 12,
     fontWeight: '700',
-    marginTop: 2,
+    letterSpacing: 2,
   },
 
   /* Pochette */
@@ -246,27 +269,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   infoText: {
     flex: 1,
     paddingRight: 16,
   },
   title: {
-    color: '#fff',
-    fontSize: 22,
+    color: Colors.textPrimary,
+    fontSize: 26,
     fontWeight: '800',
     marginBottom: 4,
   },
   artist: {
-    color: '#b3b3b3',
-    fontSize: 15,
+    color: Colors.textSecondary,
+    fontSize: 16,
     fontWeight: '500',
   },
 
   /* Progression */
   progressContainer: {
-    marginBottom: 12,
+    marginBottom: 24,
   },
   slider: {
     width: '100%',
@@ -278,8 +301,8 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   timeText: {
-    color: '#b3b3b3',
-    fontSize: 11,
+    color: Colors.textSecondary,
+    fontSize: 12,
     fontWeight: '500',
   },
 
@@ -288,38 +311,83 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   playButton: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#fff',
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    backgroundColor: Colors.primary,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
 
-  /* Bottom bar */
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 40,
+  /* Prochains titres */
+  upNextContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 16,
     marginTop: 'auto',
-    paddingBottom: 36,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  upNextHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  upNextTitle: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginLeft: 8,
+  },
+  upNextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upNextIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: Colors.categories[3],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  upNextInfo: {
+    flex: 1,
+  },
+  upNextTrackName: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  upNextTrackArtist: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
   },
   repeatBadge: {
     position: 'absolute',
-    top: 6,
-    right: 4,
+    top: -4,
+    right: -4,
     backgroundColor: '#121212',
-    borderRadius: 6,
-    width: 10,
-    height: 10,
+    borderRadius: 8,
+    width: 14,
+    height: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   repeatBadgeText: {
-    color: '#1DB954',
+    color: Colors.primary,
     fontSize: 8,
     fontWeight: 'bold',
   },

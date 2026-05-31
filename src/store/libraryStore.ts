@@ -7,11 +7,14 @@ interface LibraryState {
   likedTracks: string[]; // IDs des titres aimés
   savedAlbums: string[];
   followedArtists: string[];
+  importedTracks: Track[];
   isLoading: boolean;
 
   // Actions
+  addImportedTrack: (track: Track) => void;
+  removeImportedTrack: (trackId: string) => void;
   fetchPlaylists: (userId: string) => Promise<void>;
-  createPlaylist: (name: string, description?: string) => Promise<{ error?: string }>;
+  createPlaylist: (name: string, description?: string) => Promise<{ error?: string; data?: Playlist }>;
   deletePlaylist: (playlistId: string) => Promise<void>;
   toggleLikeTrack: (trackId: string, userId: string) => Promise<void>;
   isTrackLiked: (trackId: string) => boolean;
@@ -29,7 +32,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   likedTracks: [],
   savedAlbums: [],
   followedArtists: [],
+  importedTracks: [],
   isLoading: false,
+
+  addImportedTrack: (track) => set(state => ({ importedTracks: [...state.importedTracks, track] })),
+  removeImportedTrack: (trackId) => set(state => ({ importedTracks: state.importedTracks.filter(t => t.id !== trackId) })),
 
   fetchPlaylists: async (userId) => {
     set({ isLoading: true });
@@ -69,7 +76,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       if (error) { return { error: error.message }; }
 
       set(state => ({ playlists: [data as Playlist, ...state.playlists] }));
-      return {};
+      return { data: data as Playlist };
     } catch (e: any) {
       return { error: e.message };
     }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Image, Alert, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors } from '../../theme/colors';
@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const { signIn, isLoading } = useAuthStore();
+  const { signIn, signInWithGoogle, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
     setErrorMsg('');
@@ -35,6 +35,15 @@ export default function LoginScreen() {
     if (error) {
       setErrorMsg(error);
       Alert.alert('Erreur de connexion', error);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setErrorMsg(error);
+      Alert.alert('Erreur Google', error);
     }
   };
 
@@ -83,11 +92,23 @@ export default function LoginScreen() {
             loading={isLoading} 
             style={styles.loginBtn}
           />
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OU</Text>
+            <View style={styles.divider} />
+          </View>
           
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+            <Icon name="logo-google" size={24} color="#DB4437" style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+          </TouchableOpacity>
+
           <Button 
             title="S'inscrire" 
             variant="outline" 
             onPress={() => navigation.navigate('Register')} 
+            style={{ marginTop: Spacing.xl }}
           />
         </View>
       </LinearGradient>
@@ -106,11 +127,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxxl,
   },
   logoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
     padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
     elevation: 8,
-    shadowColor: '#00BCD4',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -118,6 +141,12 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 180,
     height: 110,
+  },
+  logoText: {
+    color: Colors.primary,
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: 4,
   },
   form: {
     width: '100%',
@@ -131,5 +160,39 @@ const styles = StyleSheet.create({
   loginBtn: {
     marginTop: Spacing.md,
     marginBottom: Spacing.lg,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    color: Colors.textSecondary,
+    marginHorizontal: Spacing.md,
+    fontWeight: '600',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    padding: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: Spacing.md,
+  },
+  googleIcon: {
+    marginRight: Spacing.md,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Alert } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { Profile } from '../types/database';
+
+GoogleSignin.configure({
+  webClientId: '994215164105-6tidtmbddvotcot6vsq0qb2qsgkif5uq.apps.googleusercontent.com',
+  scopes: ['profile', 'email'],
+});
 
 interface AuthState {
   user: any | null;
@@ -13,6 +19,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
@@ -125,6 +132,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e: any) {
       console.error('❌ Exception signIn:', e);
       return { error: 'Erreur réseau : ' + e.message };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  signInWithGoogle: async () => {
+    try {
+      set({ isLoading: true });
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      if (userInfo.idToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: userInfo.idToken,
+        });
+        if (error) return { error: error.message };
+        
+        if (data.user) {
+          set({ user: data.user, isAuthenticated: true });
+          await get().fetchProfile(data.user.id);
+          return {};
+        }
+      }
+      return { error: "Pas de token d'identification reçu de Google." };
+    } catch (error: any) {
+      console.error('❌ Google Sign-In Error:', error);
+      return { error: error.message || 'Erreur lors de la connexion avec Google.' };
     } finally {
       set({ isLoading: false });
     }

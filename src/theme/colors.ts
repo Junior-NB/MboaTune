@@ -1,56 +1,54 @@
-// Charte graphique MboaTune — palette inspirée du logo (Cyan, Orange, Bleu foncé)
+// Charte graphique MboaTune — Thème "Ubuntu" (Vert foncé, Orange doré)
 export const Colors = {
-  // Couleurs principales (tirées du logo)
-  primary: '#00BCD4',       // Cyan — CTA, icônes actives, progress bar
-  primaryDark: '#0097A7',
-  primaryLight: '#26C6DA',
-  accent: '#E6872E',        // Orange doré du logo
+  // Couleurs principales
+  primary: '#D87F30',       // Orange doré (Bouton play, icônes actives)
+  primaryDark: '#B8621B',
+  primaryLight: '#F0A050',
+  accent: '#D87F30',        
   accentLight: '#F0A050',
 
   // Fonds
-  background: '#0A0E14',    // Noir bleuté profond — s'accorde mieux avec le bleu du logo
-  surface: '#141B24',       // Surface sombre bleutée
-  surfaceLight: '#1C2733',  // Surface légèrement plus claire
-  surfaceHighlight: '#253342',
+  background: '#0F1511',    // Vert très foncé / Noir (Fond principal)
+  surface: '#17221A',       // Surface légèrement plus claire
+  surfaceLight: '#1F2E23',  // Pour les cartes
+  surfaceHighlight: '#2A3C2E',
 
   // Textes
-  textPrimary: '#FFFFFF',   // Blanc pur — titres, labels
-  textSecondary: '#B3B3B3', // Gris clair — métadonnées, sous-titres
-  textMuted: '#727272',     // Gris plus sombre — placeholders
+  textPrimary: '#FFFFFF',   // Blanc
+  textSecondary: '#A9BAA3', // Vert-gris clair (Métadonnées)
+  textMuted: '#6B7A6A',     
 
   // Utilitaires
   error: '#E74C3C',
   warning: '#F39C12',
-  success: '#00BCD4',
+  success: '#D87F30',
   info: '#3498DB',
 
   // Bordures & séparateurs
-  border: '#253342',
-  divider: '#1C2733',
+  border: '#2A3C2E',
+  divider: '#17221A',
 
   // Overlays
   overlay: 'rgba(0,0,0,0.7)',
   overlayLight: 'rgba(0,0,0,0.4)',
 
-  // Gradients (utilisés comme tableau de couleurs)
-  gradientDark: ['#0A0E14', '#0A0E14', '#141B24'] as const,
-  gradientAccent: ['#00BCD4', '#0097A7', '#0A0E14'] as const,
-  gradientCard: ['rgba(0,188,212,0.3)', 'rgba(10,14,20,0.9)'] as const,
+  // Gradients
+  gradientDark: ['#0F1511', '#0a0e0b', '#0F1511'] as const,
+  gradientCard: ['rgba(216,127,48,0.3)', 'rgba(15,21,17,0.9)'] as const,
 
   // Tab bar
-  tabActive: '#00BCD4',
-  tabInactive: '#727272',
+  tabActive: '#D87F30',
+  tabInactive: '#6B7A6A',
 
   // Player
-  playerBackground: '#0D1117',
-  playerSlider: '#00BCD4',
-  playerSliderInactive: '#253342',
+  playerBackground: '#0F1511',
+  playerSlider: '#D87F30',
+  playerSliderInactive: '#2A3C2E',
 
-  // Catégories — couleurs variées pour les genres
+  // Catégories (pour les grilles)
   categories: [
-    '#E6872E', '#00BCD4', '#8400E7', '#E8115B',
-    '#1A4B8C', '#E91429', '#148A08', '#509BF5',
-    '#BA5D07', '#D84000', '#27856A', '#503750',
+    '#B84335', '#247D68', '#6A3C94', '#B4931A',
+    '#A62E5C', '#28588A', '#804E1F', '#4A9A4A',
+    '#9B2883', '#5D8B33', '#C05C23', '#2B6E7D',
   ] as const,
 };
-

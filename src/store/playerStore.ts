@@ -6,6 +6,7 @@ import TrackPlayer, {
   AppKilledPlaybackBehavior,
 } from 'react-native-track-player';
 import type { Track } from '../types/database';
+import { useDownloadStore } from './downloadStore';
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -16,6 +17,7 @@ interface PlayerState {
   repeatMode: 'off' | 'track' | 'queue';
   position: number;
   duration: number;
+  recentTracks: Track[];
 
   // Actions
   setupPlayer: () => Promise<void>;
@@ -42,6 +44,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   repeatMode: 'off',
   position: 0,
   duration: 0,
+  recentTracks: [],
 
   setupPlayer: async () => {
     try {
@@ -89,10 +92,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   playTrack: async (track, queue = []) => {
     try {
       await TrackPlayer.reset();
+      
+      const downloadStore = useDownloadStore.getState();
 
       const trackData = {
         id: track.id,
-        url: track.file_path, // URL signée depuis Supabase Storage
+        url: downloadStore.getLocalPath(track.id) || track.file_path, // URL locale ou Supabase
         title: track.title,
         artist: track.artist?.name || 'Artiste inconnu',
         artwork: track.album?.cover_path || undefined,
@@ -107,7 +112,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           .filter(t => t.id !== track.id)
           .map(t => ({
             id: t.id,
-            url: t.file_path,
+            url: downloadStore.getLocalPath(t.id) || t.file_path,
             title: t.title,
             artist: t.artist?.name || 'Artiste inconnu',
             artwork: t.album?.cover_path || undefined,
@@ -117,7 +122,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       }
 
       await TrackPlayer.play();
-      set({ currentTrack: track, queue: queue.length ? queue : [track], isPlaying: true });
+      set(state => {
+        const updatedRecent = [track, ...state.recentTracks.filter(t => t.id !== track.id)].slice(0, 10);
+        return { 
+          currentTrack: track, 
+          queue: queue.length ? queue : [track], 
+          isPlaying: true,
+          recentTracks: updatedRecent 
+        };
+      });
     } catch (error) {
       console.error('Erreur lecture:', error);
     }
