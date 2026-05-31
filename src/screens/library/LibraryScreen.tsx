@@ -89,7 +89,13 @@ export default function LibraryScreen() {
 
   const handleCreatePlaylist = async () => {
     if (!user || !newPlaylistName.trim()) return;
-    const res = await createPlaylist(newPlaylistName.trim(), user.id);
+    const res = await createPlaylist(newPlaylistName.trim());
+    
+    if (res.error) {
+      Alert.alert('Erreur', `Impossible de créer la playlist : ${res.error}`);
+      return;
+    }
+
     if (res.data && selectedTracksToCreate.length > 0) {
       for (const trackId of selectedTracksToCreate) {
         await useLibraryStore.getState().addTrackToPlaylist(res.data.id, trackId, user.id);

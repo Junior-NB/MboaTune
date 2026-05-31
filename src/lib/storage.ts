@@ -1,34 +1,76 @@
-import { MMKV } from 'react-native-mmkv';
 import type { StateStorage } from 'zustand/middleware';
 
-export const mmkv = new MMKV();
+// Stockage de secours en mémoire
+const memoryStore: Record<string, string> = {};
+let mmkvInstance: any = null;
+let isMMKVChecked = false;
 
-// Adapter pour Zustand persist (synchrone)
+function getMMKV() {
+  if (isMMKVChecked) return mmkvInstance;
+  try {
+    const { MMKV } = require('react-native-mmkv');
+    if (MMKV) {
+      mmkvInstance = new MMKV();
+      console.log('✅ MMKV initialisé avec succès (lazy load)');
+    }
+  } catch (e) {
+    console.warn('⚠️ MMKV non disponible (lazy load), fallback sur memoryStore:', e);
+  } finally {
+    isMMKVChecked = true;
+  }
+  return mmkvInstance;
+}
+
 export const zustandStorage: StateStorage = {
   setItem: (name: string, value: string) => {
-    return mmkv.set(name, value);
+    const mmkv = getMMKV();
+    if (mmkv) {
+      mmkv.set(name, value);
+    } else {
+      memoryStore[name] = value;
+    }
   },
   getItem: (name: string) => {
-    const value = mmkv.getString(name);
-    return value ?? null;
+    const mmkv = getMMKV();
+    if (mmkv) {
+      return mmkv.getString(name) ?? null;
+    }
+    return memoryStore[name] ?? null;
   },
   removeItem: (name: string) => {
-    return mmkv.delete(name);
+    const mmkv = getMMKV();
+    if (mmkv) {
+      mmkv.delete(name);
+    } else {
+      delete memoryStore[name];
+    }
   },
 };
 
-// Adapter pour Supabase Auth (promesses obligatoires)
 export const supabaseStorage = {
   setItem: (key: string, value: string) => {
-    mmkv.set(key, value);
+    const mmkv = getMMKV();
+    if (mmkv) {
+      mmkv.set(key, value);
+    } else {
+      memoryStore[key] = value;
+    }
     return Promise.resolve();
   },
   getItem: (key: string) => {
-    const value = mmkv.getString(key);
-    return Promise.resolve(value ?? null);
+    const mmkv = getMMKV();
+    if (mmkv) {
+      return Promise.resolve(mmkv.getString(key) ?? null);
+    }
+    return Promise.resolve(memoryStore[key] ?? null);
   },
   removeItem: (key: string) => {
-    mmkv.delete(key);
+    const mmkv = getMMKV();
+    if (mmkv) {
+      mmkv.delete(key);
+    } else {
+      delete memoryStore[key];
+    }
     return Promise.resolve();
   },
 };
