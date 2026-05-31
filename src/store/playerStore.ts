@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { zustandStorage } from '../lib/storage';
 import TrackPlayer, {
   State,
   RepeatMode,
@@ -35,183 +37,192 @@ interface PlayerState {
   setCurrentTrack: (track: Track | null) => void;
 }
 
-export const usePlayerStore = create<PlayerState>((set, get) => ({
-  currentTrack: null,
-  queue: [],
-  isPlaying: false,
-  isReady: false,
-  isShuffle: false,
-  repeatMode: 'off',
-  position: 0,
-  duration: 0,
-  recentTracks: [],
+export const usePlayerStore = create<PlayerState>()(
+  persist(
+    (set, get) => ({
+      currentTrack: null,
+      queue: [],
+      isPlaying: false,
+      isReady: false,
+      isShuffle: false,
+      repeatMode: 'off',
+      position: 0,
+      duration: 0,
+      recentTracks: [],
 
-  setupPlayer: async () => {
-    try {
-      if (get().isReady) return;
-      
-      let isSetup = false;
-      try {
-        await TrackPlayer.getActiveTrackIndex();
-        isSetup = true;
-      } catch {
-        isSetup = false;
-      }
+      setupPlayer: async () => {
+        try {
+          if (get().isReady) return;
+          
+          let isSetup = false;
+          try {
+            await TrackPlayer.getActiveTrackIndex();
+            isSetup = true;
+          } catch {
+            isSetup = false;
+          }
 
-      if (!isSetup) {
-        await TrackPlayer.setupPlayer({
-          maxCacheSize: 1024 * 5, // 5 MB
-        });
+          if (!isSetup) {
+            await TrackPlayer.setupPlayer({
+              maxCacheSize: 1024 * 5, // 5 MB
+            });
 
-        await TrackPlayer.updateOptions({
-          android: {
-            appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-          },
-          capabilities: [
-            Capability.Play,
-            Capability.Pause,
-            Capability.SkipToNext,
-            Capability.SkipToPrevious,
-            Capability.SeekTo,
-            Capability.Stop,
-          ],
-          compactCapabilities: [
-            Capability.Play,
-            Capability.Pause,
-            Capability.SkipToNext,
-          ],
-        });
-      }
+            await TrackPlayer.updateOptions({
+              android: {
+                appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+              },
+              capabilities: [
+                Capability.Play,
+                Capability.Pause,
+                Capability.SkipToNext,
+                Capability.SkipToPrevious,
+                Capability.SeekTo,
+                Capability.Stop,
+              ],
+              compactCapabilities: [
+                Capability.Play,
+                Capability.Pause,
+                Capability.SkipToNext,
+              ],
+            });
+          }
 
-      set({ isReady: true });
-    } catch (error) {
-      console.error('Erreur configuration du lecteur:', error);
-    }
-  },
+          set({ isReady: true });
+        } catch (error) {
+          console.error('Erreur configuration du lecteur:', error);
+        }
+      },
 
-  playTrack: async (track, queue = []) => {
-    try {
-      await TrackPlayer.reset();
-      
-      const downloadStore = useDownloadStore.getState();
+      playTrack: async (track, queue = []) => {
+        try {
+          await TrackPlayer.reset();
+          
+          const downloadStore = useDownloadStore.getState();
 
-      const trackData = {
-        id: track.id,
-        url: downloadStore.getLocalPath(track.id) || track.file_path, // URL locale ou Supabase
-        title: track.title,
-        artist: track.artist?.name || 'Artiste inconnu',
-        artwork: track.album?.cover_path || undefined,
-        duration: track.duration_ms / 1000,
-      };
+          const trackData = {
+            id: track.id,
+            url: downloadStore.getLocalPath(track.id) || track.file_path, // URL locale ou Supabase
+            title: track.title,
+            artist: track.artist?.name || 'Artiste inconnu',
+            artwork: track.album?.cover_path || undefined,
+            duration: track.duration_ms / 1000,
+          };
 
-      await TrackPlayer.add(trackData);
+          await TrackPlayer.add(trackData);
 
-      // Ajouter le reste de la queue
-      if (queue.length > 0) {
-        const queueTracks = queue
-          .filter(t => t.id !== track.id)
-          .map(t => ({
-            id: t.id,
-            url: downloadStore.getLocalPath(t.id) || t.file_path,
-            title: t.title,
-            artist: t.artist?.name || 'Artiste inconnu',
-            artwork: t.album?.cover_path || undefined,
-            duration: t.duration_ms / 1000,
-          }));
-        await TrackPlayer.add(queueTracks);
-      }
+          // Ajouter le reste de la queue
+          if (queue.length > 0) {
+            const queueTracks = queue
+              .filter(t => t.id !== track.id)
+              .map(t => ({
+                id: t.id,
+                url: downloadStore.getLocalPath(t.id) || t.file_path,
+                title: t.title,
+                artist: t.artist?.name || 'Artiste inconnu',
+                artwork: t.album?.cover_path || undefined,
+                duration: t.duration_ms / 1000,
+              }));
+            await TrackPlayer.add(queueTracks);
+          }
 
-      await TrackPlayer.play();
-      set(state => {
-        const updatedRecent = [track, ...state.recentTracks.filter(t => t.id !== track.id)].slice(0, 10);
-        return { 
-          currentTrack: track, 
-          queue: queue.length ? queue : [track], 
-          isPlaying: true,
-          recentTracks: updatedRecent 
+          await TrackPlayer.play();
+          set(state => {
+            const updatedRecent = [track, ...state.recentTracks.filter(t => t.id !== track.id)].slice(0, 10);
+            return { 
+              currentTrack: track, 
+              queue: queue.length ? queue : [track], 
+              isPlaying: true,
+              recentTracks: updatedRecent 
+            };
+          });
+        } catch (error) {
+          console.error('Erreur lecture:', error);
+        }
+      },
+
+      togglePlayPause: async () => {
+        const state = await TrackPlayer.getPlaybackState();
+        if (state.state === State.Playing) {
+          await TrackPlayer.pause();
+          set({ isPlaying: false });
+        } else {
+          await TrackPlayer.play();
+          set({ isPlaying: true });
+        }
+      },
+
+      skipToNext: async () => {
+        try {
+          await TrackPlayer.skipToNext();
+        } catch {
+          // Fin de la queue
+        }
+      },
+
+      skipToPrevious: async () => {
+        try {
+          const position = await TrackPlayer.getPosition();
+          if (position > 3) {
+            await TrackPlayer.seekTo(0);
+          } else {
+            await TrackPlayer.skipToPrevious();
+          }
+        } catch {
+          await TrackPlayer.seekTo(0);
+        }
+      },
+
+      seekTo: async (position) => {
+        await TrackPlayer.seekTo(position);
+        set({ position });
+      },
+
+      toggleShuffle: () => {
+        set(state => ({ isShuffle: !state.isShuffle }));
+      },
+
+      toggleRepeat: async () => {
+        const { repeatMode } = get();
+        let newMode: 'off' | 'track' | 'queue';
+        let trackPlayerMode: RepeatMode;
+
+        if (repeatMode === 'off') {
+          newMode = 'queue';
+          trackPlayerMode = RepeatMode.Queue;
+        } else if (repeatMode === 'queue') {
+          newMode = 'track';
+          trackPlayerMode = RepeatMode.Track;
+        } else {
+          newMode = 'off';
+          trackPlayerMode = RepeatMode.Off;
+        }
+
+        await TrackPlayer.setRepeatMode(trackPlayerMode);
+        set({ repeatMode: newMode });
+      },
+
+      addToQueue: async (track) => {
+        const trackData = {
+          id: track.id,
+          url: track.file_path,
+          title: track.title,
+          artist: track.artist?.name || 'Artiste inconnu',
+          artwork: track.album?.cover_path || undefined,
+          duration: track.duration_ms / 1000,
         };
-      });
-    } catch (error) {
-      console.error('Erreur lecture:', error);
+        await TrackPlayer.add(trackData);
+        set(state => ({ queue: [...state.queue, track] }));
+      },
+
+      setPosition: (position) => set({ position }),
+      setDuration: (duration) => set({ duration }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      setCurrentTrack: (track) => set({ currentTrack: track }),
+    }),
+    {
+      name: 'player-storage',
+      storage: createJSONStorage(() => zustandStorage),
+      partialize: (state) => ({ recentTracks: state.recentTracks }),
     }
-  },
-
-  togglePlayPause: async () => {
-    const state = await TrackPlayer.getPlaybackState();
-    if (state.state === State.Playing) {
-      await TrackPlayer.pause();
-      set({ isPlaying: false });
-    } else {
-      await TrackPlayer.play();
-      set({ isPlaying: true });
-    }
-  },
-
-  skipToNext: async () => {
-    try {
-      await TrackPlayer.skipToNext();
-    } catch {
-      // Fin de la queue
-    }
-  },
-
-  skipToPrevious: async () => {
-    try {
-      const position = await TrackPlayer.getPosition();
-      if (position > 3) {
-        await TrackPlayer.seekTo(0);
-      } else {
-        await TrackPlayer.skipToPrevious();
-      }
-    } catch {
-      await TrackPlayer.seekTo(0);
-    }
-  },
-
-  seekTo: async (position) => {
-    await TrackPlayer.seekTo(position);
-    set({ position });
-  },
-
-  toggleShuffle: () => {
-    set(state => ({ isShuffle: !state.isShuffle }));
-  },
-
-  toggleRepeat: async () => {
-    const { repeatMode } = get();
-    let newMode: 'off' | 'track' | 'queue';
-    let trackPlayerMode: RepeatMode;
-
-    if (repeatMode === 'off') {
-      newMode = 'queue';
-      trackPlayerMode = RepeatMode.Queue;
-    } else if (repeatMode === 'queue') {
-      newMode = 'track';
-      trackPlayerMode = RepeatMode.Track;
-    } else {
-      newMode = 'off';
-      trackPlayerMode = RepeatMode.Off;
-    }
-
-    await TrackPlayer.setRepeatMode(trackPlayerMode);
-    set({ repeatMode: newMode });
-  },
-
-  addToQueue: async (track) => {
-    const trackData = {
-      id: track.id,
-      url: track.file_path,
-      title: track.title,
-      artist: track.artist?.name || 'Artiste inconnu',
-      artwork: track.album?.cover_path || undefined,
-      duration: track.duration_ms / 1000,
-    };
-    await TrackPlayer.add(trackData);
-    set(state => ({ queue: [...state.queue, track] }));
-  },
-
-  setPosition: (position) => set({ position }),
-  setDuration: (duration) => set({ duration }),
-  setIsPlaying: (isPlaying) => set({ isPlaying }),
-  setCurrentTrack: (track) => set({ currentTrack: track }),
-}));
+  )
+);

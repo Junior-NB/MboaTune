@@ -12,42 +12,14 @@ import { Alert } from 'react-native';
 const SUPABASE_URL = 'https://xfswbjqktltddoynaipf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_jCQzh52HktyzfKuFugfMbw_nKfCLlLZ';
 
-// Stockage en mémoire (fiable à 100% sans dépendance native)
-const memoryStore: Record<string, string> = {};
-
-const SimpleStorage = {
-  getItem: (key: string) => {
-    return memoryStore[key] ?? null;
-  },
-  setItem: (key: string, value: string) => {
-    memoryStore[key] = value;
-  },
-  removeItem: (key: string) => {
-    delete memoryStore[key];
-  },
-};
-
-// Essayer d'utiliser MMKV si disponible, sinon mémoire
-let finalStorage = SimpleStorage;
-try {
-  const { MMKV } = require('react-native-mmkv');
-  const mmkv = new MMKV();
-  finalStorage = {
-    getItem: (key: string) => mmkv.getString(key) ?? null,
-    setItem: (key: string, value: string) => mmkv.set(key, value),
-    removeItem: (key: string) => mmkv.delete(key),
-  };
-  console.log('✅ MMKV disponible');
-} catch (e) {
-  console.warn('⚠️ MMKV non disponible, stockage mémoire utilisé');
-}
+import { supabaseStorage } from './storage';
 
 export const supabase: SupabaseClient = createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   {
     auth: {
-      storage: finalStorage,
+      storage: supabaseStorage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
