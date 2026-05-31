@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/storage';
+import { supabase } from '../lib/supabase';
 import TrackPlayer, {
   State,
   RepeatMode,
@@ -99,30 +100,50 @@ export const usePlayerStore = create<PlayerState>()(
           
           const downloadStore = useDownloadStore.getState();
 
-          const trackData = {
-            id: track.id,
-            url: downloadStore.getLocalPath(track.id) || track.file_path, // URL locale ou Supabase
-            title: track.title,
-            artist: track.artist?.name || 'Artiste inconnu',
-            artwork: track.album?.cover_path || undefined,
-            duration: track.duration_ms / 1000,
-          };
+          const formatTrack = (t: Track) => ({
+            id: t.id,
+            url: downloadStore.getLocalPath(t.id) || t.file_path,
+            title: t.title,
+            artist: t.artist?.name || 'Artiste inconnu',
+            artwork: t.album?.cover_path || undefined,
+            duration: t.duration_ms / 1000,
+          });
 
-          await TrackPlayer.add(trackData);
+          await TrackPlayer.add(formatTrack(track));
 
-          // Ajouter le reste de la queue
-          if (queue.length > 0) {
-            const queueTracks = queue
-              .filter(t => t.id !== track.id)
-              .map(t => ({
-                id: t.id,
-                url: downloadStore.getLocalPath(t.id) || t.file_path,
-                title: t.title,
-                artist: t.artist?.name || 'Artiste inconnu',
-                artwork: t.album?.cover_path || undefined,
-                duration: t.duration_ms / 1000,
-              }));
-            await TrackPlayer.add(queueTracks);
+          // 1. Déterminer les prochaines pistes (celles APRES la piste sélectionnée)
+          let startIndex = queue.findIndex(t => t.id === track.id);
+          let upcomingTracks: Track[] = [];
+          if (startIndex !== -1) {
+            upcomingTracks = queue.slice(startIndex + 1);
+          } else {
+            upcomingTracks = queue.filter(t => t.id !== track.id);
+          }
+
+          let finalQueue = [track, ...upcomingTracks];
+
+          // 2. Si la file d'attente est trop petite, on ajoute des sons aléatoires de la BD (Autoplay)
+          if (upcomingTracks.length < 3) {
+            // Utilisation d'un petit hack pour simuler random : trier par ordre décroissant (ou juste prendre les derniers)
+            const { data: randomTracks } = await supabase
+              .from('tracks')
+              .select('*, artist:artists(*), album:albums(*)')
+              .limit(15);
+              
+            if (randomTracks) {
+              // Mélanger les résultats aléatoirement
+              const shuffled = randomTracks.sort(() => 0.5 - Math.random());
+              // Filtrer ceux qui sont déjà dans la queue
+              const existingIds = finalQueue.map(t => t.id);
+              const newTracks = shuffled.filter((t: Track) => !existingIds.includes(t.id));
+              
+              upcomingTracks = [...upcomingTracks, ...newTracks];
+              finalQueue = [...finalQueue, ...newTracks];
+            }
+          }
+
+          if (upcomingTracks.length > 0) {
+            await TrackPlayer.add(upcomingTracks.map(formatTrack));
           }
 
           await TrackPlayer.play();
@@ -130,7 +151,7 @@ export const usePlayerStore = create<PlayerState>()(
             const updatedRecent = [track, ...state.recentTracks.filter(t => t.id !== track.id)].slice(0, 10);
             return { 
               currentTrack: track, 
-              queue: queue.length ? queue : [track], 
+              queue: finalQueue, 
               isPlaying: true,
               recentTracks: updatedRecent 
             };
