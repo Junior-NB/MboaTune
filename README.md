@@ -15,8 +15,8 @@ MboaTune est une application mobile de streaming musical professionnelle (style 
 ## 🧪 Identifiants de test
 
 Pour tester l'application sans créer de compte, vous pouvez utiliser ces identifiants de test :
-*   **Email :** `test@mboatune.com`
-*   **Mot de passe :** `password123`
+*   **Email :** `juniorinfernal302@gmail.com`
+*   **Mot de passe :** `test123456`
 *(Note: assurez-vous que ce compte est créé dans votre projet Supabase)*
 
 ## 🚀 Installation & Démarrage
