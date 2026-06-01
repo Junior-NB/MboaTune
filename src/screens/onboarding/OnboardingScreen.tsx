@@ -35,20 +35,45 @@ export default function OnboardingScreen() {
     }
   };
 
+  const forceLocalSkip = () => {
+    useAuthStore.setState((state: any) => ({
+      profile: state.profile 
+        ? { ...state.profile, onboarding_completed: true } 
+        : { id: state.user?.id || 'temp', username: 'User', display_name: 'User', onboarding_completed: true }
+    }));
+  };
+
+  const handleSkip = async () => {
+    setLoading(true);
+    try {
+      const result = await updateProfile({ onboarding_completed: true } as any);
+      if (result && result.error) {
+        forceLocalSkip();
+      }
+    } catch (e) {
+      forceLocalSkip();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleContinue = async () => {
     if (selectedIds.length < 3) return;
     setLoading(true);
-    // Essayer de mettre à jour dans Supabase
-    const result = await updateProfile({ onboarding_completed: true } as any);
-    // Si Supabase échoue (colonne manquante), on met à jour localement quand même
-    if (result.error) {
-      // Fallback: mise à jour locale directe
-      const { useAuthStore: store } = require('../../store/authStore');
-      store.setState((state: any) => ({
-        profile: state.profile ? { ...state.profile, onboarding_completed: true } : null,
-      }));
+    
+    try {
+      // Essayer de mettre à jour dans Supabase
+      const result = await updateProfile({ onboarding_completed: true } as any);
+      // Si Supabase échoue, on met à jour localement quand même
+      if (result && result.error) {
+        forceLocalSkip(); // Fallback
+      }
+    } catch (e) {
+      console.warn('Erreur lors de la mise à jour du profil onboarding:', e);
+      forceLocalSkip(); // Fallback
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -93,6 +118,9 @@ export default function OnboardingScreen() {
             disabled={selectedIds.length < 3}
             loading={loading}
           />
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipText}>Ignorer cette étape</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -172,5 +200,15 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     paddingBottom: Spacing.xxxl,
     backgroundColor: 'rgba(18, 18, 18, 0.95)',
+  },
+  skipButton: {
+    marginTop: Spacing.md,
+    alignItems: 'center',
+    padding: Spacing.sm,
+  },
+  skipText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
+    fontWeight: '600',
   },
 });

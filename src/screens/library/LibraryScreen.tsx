@@ -212,14 +212,19 @@ export default function LibraryScreen() {
 
               {/* Playlists créées */}
               {playlists.map(p => (
-                <TouchableOpacity key={p.id} style={styles.listItem} activeOpacity={0.7}>
+                <TouchableOpacity 
+                  key={p.id} 
+                  style={styles.listItem} 
+                  activeOpacity={0.7}
+                  onPress={() => (navigation as any).navigate('PlaylistDetail', { playlistId: p.id })}
+                >
                   <View style={styles.playlistCover}>
                     <Icon name="musical-notes" size={22} color="#b3b3b3" />
                   </View>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle}>{p.name}</Text>
                     <Text style={styles.itemSubtitle}>
-                      Playlist · {p.track_ids?.length || 0} titres
+                      Playlist
                     </Text>
                   </View>
                 </TouchableOpacity>

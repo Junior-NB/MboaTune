@@ -14,6 +14,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useDownloadStore } from '../../store/downloadStore';
 import { Colors } from '../../theme/colors';
 import { Spacing, BorderRadius, FontSize, IconSize } from '../../theme/spacing';
+import TrackOptionsModal from '../../components/TrackOptionsModal';
 
 const { width } = Dimensions.get('window');
 const ARTWORK_SIZE = width - 48;
@@ -21,7 +22,7 @@ const ARTWORK_SIZE = width - 48;
 export default function PlayerScreen() {
   const navigation = useNavigation();
   const {
-    currentTrack, isPlaying, togglePlayPause,
+    currentTrack, queue, isPlaying, togglePlayPause,
     skipToNext, skipToPrevious, isShuffle,
     toggleShuffle, repeatMode, toggleRepeat, seekTo,
   } = usePlayerStore();
@@ -30,9 +31,16 @@ export default function PlayerScreen() {
   const { downloadTrack, removeDownload, isDownloaded, isDownloading } = useDownloadStore();
   const progress = useProgress(200);
 
+  const [showOptions, setShowOptions] = useState(false);
+
   const liked = currentTrack ? isTrackLiked(currentTrack.id) : false;
   const downloaded = currentTrack ? isDownloaded(currentTrack.id) : false;
   const downloading = currentTrack ? isDownloading[currentTrack.id] : false;
+
+  const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
+  const nextTrack = currentIndex !== -1 && currentIndex + 1 < queue.length 
+    ? queue[currentIndex + 1] 
+    : null;
 
   const handleToggleLike = () => {
     if (currentTrack && user) {
@@ -85,7 +93,7 @@ export default function PlayerScreen() {
         <View style={styles.headerCenter}>
           <Text style={styles.headerLabel}>EN ÉCOUTE</Text>
         </View>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={() => setShowOptions(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="ellipsis-horizontal" size={22} color={Colors.textSecondary} />
         </TouchableOpacity>
       </Animated.View>
@@ -197,18 +205,32 @@ export default function PlayerScreen() {
       <Animated.View entering={SlideInDown.duration(500).delay(600)} style={styles.upNextContainer}>
         <View style={styles.upNextHeader}>
           <Icon name="musical-notes" size={16} color={Colors.textSecondary} />
-          <Text style={styles.upNextTitle}>PROCHAINS TITRES</Text>
+          <Text style={styles.upNextTitle}>PROCHAIN TITRE</Text>
         </View>
         <View style={styles.upNextCard}>
-          <View style={styles.upNextIconBox}>
-            <Icon name="musical-note" size={24} color="#fff" />
-          </View>
+          {nextTrack?.album?.cover_path && !nextTrack.album.cover_path.includes('placeholder') ? (
+            <Image source={{ uri: nextTrack.album.cover_path }} style={[styles.upNextIconBox, { backgroundColor: 'transparent' }]} />
+          ) : (
+            <View style={styles.upNextIconBox}>
+              <Icon name="musical-note" size={24} color="#fff" />
+            </View>
+          )}
           <View style={styles.upNextInfo}>
-            <Text style={styles.upNextTrackName}>Titre suivant</Text>
-            <Text style={styles.upNextTrackArtist}>Artiste suivant</Text>
+            <Text style={styles.upNextTrackName} numberOfLines={1}>
+              {nextTrack ? nextTrack.title : 'Fin de la liste'}
+            </Text>
+            <Text style={styles.upNextTrackArtist} numberOfLines={1}>
+              {nextTrack ? (nextTrack.artist?.name || 'Artiste inconnu') : 'Ajoutez plus de titres'}
+            </Text>
           </View>
         </View>
       </Animated.View>
+
+      <TrackOptionsModal
+        track={currentTrack}
+        visible={showOptions}
+        onClose={() => setShowOptions(false)}
+      />
     </LinearGradient>
   );
 }

@@ -177,25 +177,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         .eq('id', userId)
         .single();
         
+      const user = get().user;
+      const fallbackName = user?.user_metadata?.username || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Utilisateur';
+
       if (!error && data) {
-        const user = get().user;
-        const fallbackName = user?.user_metadata?.username || 'Utilisateur';
+        const isCompleted = user?.user_metadata?.onboarding_completed === true || data.onboarding_completed === true;
         set({ 
           profile: {
             ...(data as Profile),
             username: data.username || fallbackName,
-            display_name: data.display_name || fallbackName
+            display_name: data.display_name || fallbackName,
+            onboarding_completed: isCompleted
           } 
         });
       } else {
-        // Fallback si la table profiles n'est pas encore créée sur Supabase
-        const user = get().user;
+        // Si le profil n'existe pas dans la BD (ex: connexion Google sans trigger), on le crée
+        const newProfile = {
+          id: userId,
+          username: fallbackName,
+          display_name: fallbackName,
+        };
+        
+        await supabase.from('profiles').upsert(newProfile);
+
         const isCompleted = user?.user_metadata?.onboarding_completed === true;
         set({ 
           profile: { 
             id: userId, 
-            username: user?.user_metadata?.username || 'Utilisateur', 
-            display_name: user?.user_metadata?.username || 'Utilisateur',
+            username: fallbackName, 
+            display_name: fallbackName,
             onboarding_completed: isCompleted,
           } as Profile 
         });
@@ -209,21 +219,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = get().user;
     if (!user) { return { error: 'Non connecté' }; }
 
-    // Mettre à jour les métadonnées utilisateur pour la persistance garantie
-    if (updates.onboarding_completed !== undefined) {
-      await supabase.auth.updateUser({
-        data: { onboarding_completed: updates.onboarding_completed, username: updates.username }
-      });
-    }
+    try {
+      // Mettre à jour les métadonnées utilisateur pour la persistance garantie
+      if (updates.onboarding_completed !== undefined) {
+        await supabase.auth.updateUser({
+          data: { onboarding_completed: updates.onboarding_completed, username: updates.username }
+        });
+      }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
 
-    if (error) { 
-      console.warn('Erreur Supabase lors de la mise à jour du profil:', error.message);
-      // On continue quand même pour mettre à jour l'état local
+      if (error) { 
+        console.warn('Erreur Supabase lors de la mise à jour du profil:', error.message);
+        // On continue quand même pour mettre à jour l'état local
+      }
+    } catch (e: any) {
+      console.warn('Exception dans updateProfile:', e);
     }
 
     set(state => ({

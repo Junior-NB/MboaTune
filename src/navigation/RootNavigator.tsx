@@ -13,6 +13,7 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import LikedTracksScreen from '../screens/library/LikedTracksScreen';
 import AlbumScreen from '../screens/home/AlbumScreen';
 import ArtistScreen from '../screens/home/ArtistScreen';
+import PlaylistDetailScreen from '../screens/library/PlaylistDetailScreen';
 
 import { useLibraryStore } from '../store/libraryStore';
 
@@ -77,6 +78,11 @@ export default function RootNavigator() {
         <Stack.Screen 
           name="Artist" 
           component={ArtistScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen 
+          name="PlaylistDetail" 
+          component={PlaylistDetailScreen}
           options={{ presentation: 'card' }}
         />
       </Stack.Navigator>

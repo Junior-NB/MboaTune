@@ -35,6 +35,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabsParamList>;
   PlayerModal: undefined;
   LikedTracks: undefined;
+  PlaylistDetail: { playlistId: string };
   Album: { albumId: string };
   Artist: { artistId: string };
 };

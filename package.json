@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/slider": "^5.2.0",
     "@react-native-documents/picker": "^12.0.1",
     "@react-native-google-signin/google-signin": "^16.1.2",
@@ -31,6 +32,7 @@
     "react-native-reanimated": "^4.3.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.1",
+    "react-native-share": "^12.3.1",
     "react-native-track-player": "^5.0.0-alpha0-nightly-359af5a12d712d3b685530aed9b9625865a25d74",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",

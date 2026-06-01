@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, StatusBar,
+  View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, StatusBar, ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -9,17 +9,22 @@ import { useNavigation } from '@react-navigation/native';
 import { useLibraryStore } from '../../store/libraryStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
+import { useDownloadStore } from '../../store/downloadStore';
 import { supabase } from '../../lib/supabase';
 import { mockTracks } from '../../data/mockData';
 import type { Track } from '../../types/database';
+import TrackOptionsModal from '../../components/TrackOptionsModal';
 
 export default function LikedTracksScreen() {
   const navigation = useNavigation();
-  const { likedTracks } = useLibraryStore();
+  const { likedTracks, cachedTracks, cacheTracks } = useLibraryStore();
   const { playTrack } = usePlayerStore();
   const { user } = useAuthStore();
+  const { downloadTrack, removeDownload, isDownloaded, isDownloading, downloadedTracks } = useDownloadStore();
+  
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [optionsTrack, setOptionsTrack] = useState<Track | null>(null);
 
   useEffect(() => {
     loadLikedTracks();
@@ -27,40 +32,58 @@ export default function LikedTracksScreen() {
 
   const loadLikedTracks = async () => {
     setIsLoading(true);
+    let loadedTracks: Track[] = [];
     try {
-      // D'abord chercher dans les mocks
       const localLiked = mockTracks.filter(t => likedTracks.includes(t.id));
+      loadedTracks = [...localLiked];
 
-      // Puis chercher sur Supabase pour les vrais tracks
       if (likedTracks.length > 0) {
-        const supabaseIds = likedTracks.filter(id => !id.startsWith('t') || id.length > 5);
-        if (supabaseIds.length > 0) {
-          const { data } = await supabase
+        const supabaseIds = likedTracks.filter(id => !id.startsWith('t') && id.length > 5);
+        
+        // 1. Récupérer immédiatement les titres du cache local
+        const cachedSupabaseTracks = supabaseIds
+          .map(id => downloadedTracks[id]?.track || cachedTracks[id])
+          .filter(Boolean) as Track[];
+          
+        loadedTracks = [...loadedTracks, ...cachedSupabaseTracks];
+
+        // 2. Fetcher seulement ceux qui ne sont pas en cache ou téléchargés
+        const missingIds = supabaseIds.filter(id => !downloadedTracks[id] && !cachedTracks[id]);
+
+        if (missingIds.length > 0) {
+          const { data, error } = await supabase
             .from('tracks')
             .select('*, artist:artists(*), album:albums(*)')
-            .in('id', supabaseIds);
-          if (data) {
-            setTracks([...localLiked, ...(data as Track[])]);
-            setIsLoading(false);
-            return;
+            .in('id', missingIds);
+            
+          if (data && !error) {
+            loadedTracks = [...loadedTracks, ...(data as Track[])];
+            cacheTracks(data as Track[]);
+          } else {
+            console.warn('Erreur fetch Supabase:', error);
           }
         }
       }
-      setTracks(localLiked);
     } catch (e) {
-      console.error('Erreur chargement titres likés:', e);
-      const localLiked = mockTracks.filter(t => likedTracks.includes(t.id));
-      setTracks(localLiked);
+      console.log('Mode hors ligne ou erreur réseau');
     } finally {
+      // Éliminer les doublons potentiels
+      const uniqueTracks = Array.from(new Map(loadedTracks.map(t => [t.id, t])).values());
+      setTracks(uniqueTracks);
       setIsLoading(false);
     }
   };
 
-  const formatDuration = (ms: number) => {
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.floor((ms % 60000) / 1000);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  const handleDownloadAll = async () => {
+    for (const track of tracks) {
+      if (!isDownloaded(track.id) && !isDownloading[track.id]) {
+        await downloadTrack(track);
+      }
+    }
   };
+
+  const allDownloaded = tracks.length > 0 && tracks.every(t => isDownloaded(t.id));
+  const someDownloading = tracks.some(t => isDownloading[t.id]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -71,7 +94,6 @@ export default function LikedTracksScreen() {
         locations={[0, 0.35, 0.7]}
         style={styles.gradient}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="chevron-back" size={26} color="#fff" />
@@ -82,7 +104,6 @@ export default function LikedTracksScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Infos playlist */}
           <View style={styles.playlistInfo}>
             <LinearGradient
               colors={['#450af5', '#8e8ee5']}
@@ -96,11 +117,18 @@ export default function LikedTracksScreen() {
             </Text>
           </View>
 
-          {/* Boutons d'action */}
           <View style={styles.actionRow}>
             <View style={styles.actionLeft}>
-              <TouchableOpacity>
-                <Icon name="download-outline" size={24} color="#b3b3b3" />
+              <TouchableOpacity onPress={handleDownloadAll} disabled={someDownloading || tracks.length === 0}>
+                {someDownloading ? (
+                  <ActivityIndicator size="small" color="#1DB954" />
+                ) : (
+                  <Icon 
+                    name={allDownloaded ? "download" : "download-outline"} 
+                    size={28} 
+                    color={allDownloaded ? "#1DB954" : "#b3b3b3"} 
+                  />
+                )}
               </TouchableOpacity>
             </View>
             <View style={styles.actionRight}>
@@ -110,9 +138,7 @@ export default function LikedTracksScreen() {
               <TouchableOpacity
                 style={styles.playAllBtn}
                 onPress={() => {
-                  if (tracks.length > 0) {
-                    playTrack(tracks[0], tracks);
-                  }
+                  if (tracks.length > 0) playTrack(tracks[0], tracks);
                 }}
               >
                 <Icon name="play" size={28} color="#000" style={{ marginLeft: 2 }} />
@@ -120,7 +146,6 @@ export default function LikedTracksScreen() {
             </View>
           </View>
 
-          {/* Liste des titres */}
           {tracks.length === 0 && !isLoading ? (
             <View style={styles.emptyState}>
               <Icon name="heart-outline" size={48} color="#535353" />
@@ -130,7 +155,7 @@ export default function LikedTracksScreen() {
               </Text>
             </View>
           ) : (
-            tracks.map((track, index) => (
+            tracks.map((track) => (
               <TouchableOpacity
                 key={track.id}
                 style={styles.trackItem}
@@ -147,19 +172,61 @@ export default function LikedTracksScreen() {
                   )}
                   <View style={styles.trackInfo}>
                     <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
-                    <Text style={styles.trackArtist} numberOfLines={1}>
-                      {track.artist?.name || 'Artiste inconnu'}
-                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                      {isDownloaded(track.id) && (
+                        <Icon name="download" size={12} color="#1DB954" style={{marginRight: 4}} />
+                      )}
+                      <Text style={styles.trackArtist} numberOfLines={1}>
+                        {track.artist?.name || 'Artiste inconnu'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-                <TouchableOpacity>
-                  <Icon name="ellipsis-horizontal" size={20} color="#b3b3b3" />
-                </TouchableOpacity>
+                
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 16}}>
+                  <TouchableOpacity onPress={() => {
+                    if (isDownloaded(track.id)) {
+                      removeDownload(track.id);
+                    } else {
+                      downloadTrack(track);
+                    }
+                  }}>
+                    {isDownloading[track.id] ? (
+                      <ActivityIndicator size="small" color="#1DB954" />
+                    ) : (
+                      <Icon 
+                        name={isDownloaded(track.id) ? "download" : "download-outline"} 
+                        size={20} 
+                        color={isDownloaded(track.id) ? "#1DB954" : "#b3b3b3"} 
+                      />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={(e) => {
+                      if (e && e.stopPropagation) e.stopPropagation();
+                      setOptionsTrack(track);
+                    }}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                    style={{ padding: 10 }}
+                  >
+                    <Icon name="ellipsis-horizontal" size={24} color="#b3b3b3" />
+                  </TouchableOpacity>
+                </View>
               </TouchableOpacity>
             ))
           )}
         </ScrollView>
       </LinearGradient>
+
+      <TrackOptionsModal
+        track={optionsTrack}
+        visible={!!optionsTrack}
+        onClose={() => setOptionsTrack(null)}
+        isLikedView={true}
+        onTrackRemoved={(id) => {
+          setTracks(prev => prev.filter(t => t.id !== id));
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -213,7 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
   },
-  actionLeft: { flexDirection: 'row', gap: 16 },
+  actionLeft: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   actionRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   playAllBtn: {
     width: 56,

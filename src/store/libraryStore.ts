@@ -10,6 +10,8 @@ interface LibraryState {
   savedAlbums: string[];
   followedArtists: string[];
   importedTracks: Track[];
+  cachedTracks: Record<string, Track>;
+  playlistTracks: Record<string, string[]>; // playlistId -> trackIds
   isLoading: boolean;
 
   // Actions
@@ -27,6 +29,8 @@ interface LibraryState {
   toggleFollowArtist: (artistId: string, userId: string) => Promise<void>;
   addTrackToPlaylist: (playlistId: string, trackId: string, userId: string) => Promise<void>;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  cacheTracks: (tracks: Track[]) => void;
+  cachePlaylistTracks: (playlistId: string, trackIds: string[]) => void;
 }
 
 export const useLibraryStore = create<LibraryState>()(
@@ -37,7 +41,19 @@ export const useLibraryStore = create<LibraryState>()(
       savedAlbums: [],
       followedArtists: [],
       importedTracks: [],
+      cachedTracks: {},
+      playlistTracks: {},
       isLoading: false,
+
+      cacheTracks: (tracks) => set(state => {
+        const newCache = { ...state.cachedTracks };
+        tracks.forEach(t => { newCache[t.id] = t; });
+        return { cachedTracks: newCache };
+      }),
+
+      cachePlaylistTracks: (playlistId, trackIds) => set(state => ({
+        playlistTracks: { ...state.playlistTracks, [playlistId]: trackIds }
+      })),
 
       addImportedTrack: (track) => set(state => ({ importedTracks: [...state.importedTracks, track] })),
       removeImportedTrack: (trackId) => set(state => ({ importedTracks: state.importedTracks.filter(t => t.id !== trackId) })),
@@ -238,10 +254,13 @@ export const useLibraryStore = create<LibraryState>()(
       name: 'library-storage',
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({ 
+        playlists: state.playlists,
         likedTracks: state.likedTracks,
         savedAlbums: state.savedAlbums,
         followedArtists: state.followedArtists,
-        importedTracks: state.importedTracks
+        importedTracks: state.importedTracks,
+        cachedTracks: state.cachedTracks,
+        playlistTracks: state.playlistTracks
       }),
     }
   )
