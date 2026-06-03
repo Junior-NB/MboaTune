@@ -11,9 +11,10 @@ import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
 import { useDownloadStore } from '../../store/downloadStore';
 import { supabase } from '../../lib/supabase';
-import { mockTracks } from '../../data/mockData';
 import type { Track } from '../../types/database';
 import TrackOptionsModal from '../../components/TrackOptionsModal';
+import { Colors } from '../../theme/colors';
+import { Spacing, BorderRadius, FontSize } from '../../theme/spacing';
 
 export default function LikedTracksScreen() {
   const navigation = useNavigation();
@@ -34,11 +35,8 @@ export default function LikedTracksScreen() {
     setIsLoading(true);
     let loadedTracks: Track[] = [];
     try {
-      const localLiked = mockTracks.filter(t => likedTracks.includes(t.id));
-      loadedTracks = [...localLiked];
-
       if (likedTracks.length > 0) {
-        const supabaseIds = likedTracks.filter(id => !id.startsWith('t') && id.length > 5);
+        const supabaseIds = likedTracks; // We consider all ids as supabase ids now
         
         // 1. Récupérer immédiatement les titres du cache local
         const cachedSupabaseTracks = supabaseIds
@@ -90,13 +88,13 @@ export default function LikedTracksScreen() {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <LinearGradient
-        colors={['#5038a0', '#2a1a5e', '#121212']}
-        locations={[0, 0.35, 0.7]}
+        colors={Colors.gradientDark}
+        locations={[0, 0.4, 1]}
         style={styles.gradient}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={26} color="#fff" />
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Icon name="chevron-back" size={28} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -106,10 +104,12 @@ export default function LikedTracksScreen() {
         >
           <View style={styles.playlistInfo}>
             <LinearGradient
-              colors={['#450af5', '#8e8ee5']}
+              colors={Colors.gradientAccent}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.bigCover}
             >
-              <Icon name="heart" size={60} color="#fff" />
+              <Icon name="heart" size={72} color="#fff" />
             </LinearGradient>
             <Text style={styles.playlistTitle}>Titres likés</Text>
             <Text style={styles.playlistMeta}>
@@ -121,34 +121,40 @@ export default function LikedTracksScreen() {
             <View style={styles.actionLeft}>
               <TouchableOpacity onPress={handleDownloadAll} disabled={someDownloading || tracks.length === 0}>
                 {someDownloading ? (
-                  <ActivityIndicator size="small" color="#1DB954" />
+                  <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
                   <Icon 
                     name={allDownloaded ? "download" : "download-outline"} 
                     size={28} 
-                    color={allDownloaded ? "#1DB954" : "#b3b3b3"} 
+                    color={allDownloaded ? Colors.primary : Colors.textSecondary} 
                   />
                 )}
               </TouchableOpacity>
             </View>
             <View style={styles.actionRight}>
               <TouchableOpacity>
-                <Icon name="shuffle" size={28} color="#1DB954" />
+                <Icon name="shuffle" size={28} color={Colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.playAllBtn}
                 onPress={() => {
                   if (tracks.length > 0) playTrack(tracks[0], tracks);
                 }}
               >
-                <Icon name="play" size={28} color="#000" style={{ marginLeft: 2 }} />
+                <LinearGradient
+                  colors={Colors.gradientAccent}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.playAllBtn}
+                >
+                  <Icon name="play" size={28} color="#FFF" style={{ marginLeft: 3 }} />
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
 
           {tracks.length === 0 && !isLoading ? (
             <View style={styles.emptyState}>
-              <Icon name="heart-outline" size={48} color="#535353" />
+              <Icon name="heart-outline" size={64} color={Colors.textMuted} />
               <Text style={styles.emptyTitle}>Les titres que vous aimez apparaîtront ici</Text>
               <Text style={styles.emptySub}>
                 Enregistrez des titres en appuyant sur l'icône cœur.
@@ -167,14 +173,14 @@ export default function LikedTracksScreen() {
                     <Image source={{ uri: track.album.cover_path }} style={styles.trackCover} />
                   ) : (
                     <View style={[styles.trackCover, styles.trackCoverPlaceholder]}>
-                      <Icon name="musical-notes" size={16} color="#b3b3b3" />
+                      <Icon name="musical-notes" size={20} color={Colors.textMuted} />
                     </View>
                   )}
                   <View style={styles.trackInfo}>
                     <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                       {isDownloaded(track.id) && (
-                        <Icon name="download" size={12} color="#1DB954" style={{marginRight: 4}} />
+                        <Icon name="download" size={14} color={Colors.primary} style={{marginRight: 4}} />
                       )}
                       <Text style={styles.trackArtist} numberOfLines={1}>
                         {track.artist?.name || 'Artiste inconnu'}
@@ -192,12 +198,12 @@ export default function LikedTracksScreen() {
                     }
                   }}>
                     {isDownloading[track.id] ? (
-                      <ActivityIndicator size="small" color="#1DB954" />
+                      <ActivityIndicator size="small" color={Colors.primary} />
                     ) : (
                       <Icon 
                         name={isDownloaded(track.id) ? "download" : "download-outline"} 
-                        size={20} 
-                        color={isDownloaded(track.id) ? "#1DB954" : "#b3b3b3"} 
+                        size={22} 
+                        color={isDownloaded(track.id) ? Colors.primary : Colors.textMuted} 
                       />
                     )}
                   </TouchableOpacity>
@@ -209,7 +215,7 @@ export default function LikedTracksScreen() {
                     hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                     style={{ padding: 10 }}
                   >
-                    <Icon name="ellipsis-horizontal" size={24} color="#b3b3b3" />
+                    <Icon name="ellipsis-horizontal" size={24} color={Colors.textMuted} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -232,44 +238,45 @@ export default function LikedTracksScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#121212' },
+  safeArea: { flex: 1, backgroundColor: Colors.background },
   gradient: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   scrollContent: { paddingBottom: 120 },
 
   /* Playlist info */
   playlistInfo: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   bigCover: {
-    width: 200,
-    height: 200,
-    borderRadius: 4,
+    width: 220,
+    height: 220,
+    borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
+    marginBottom: Spacing.xl,
+    elevation: 12,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.4,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 16,
   },
   playlistTitle: {
-    color: '#fff',
-    fontSize: 24,
+    color: Colors.textPrimary,
+    fontSize: FontSize.xxxl,
     fontWeight: '800',
     marginBottom: 6,
   },
   playlistMeta: {
-    color: '#b3b3b3',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
+    fontWeight: '500',
   },
 
   /* Actions */
@@ -277,18 +284,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   actionLeft: { flexDirection: 'row', gap: 16, alignItems: 'center' },
-  actionRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  actionRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   playAllBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1DB954',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   /* Tracks */
@@ -296,26 +307,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
   },
   trackLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   trackCover: {
-    width: 48,
-    height: 48,
-    borderRadius: 4,
-    backgroundColor: '#282828',
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
   },
   trackCoverPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  trackInfo: { marginLeft: 12, flex: 1, paddingRight: 12 },
-  trackTitle: { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 3 },
-  trackArtist: { color: '#b3b3b3', fontSize: 13 },
+  trackInfo: { marginLeft: 16, flex: 1, paddingRight: 12 },
+  trackTitle: { color: Colors.textPrimary, fontSize: FontSize.md, fontWeight: '700', marginBottom: 4 },
+  trackArtist: { color: Colors.textSecondary, fontSize: FontSize.sm },
 
   /* Empty */
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' },
-  emptySub: { color: '#b3b3b3', fontSize: 14, textAlign: 'center', marginTop: 8 },
+  emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
+  emptyTitle: { color: Colors.textPrimary, fontSize: FontSize.xl, fontWeight: '800', marginTop: 24, textAlign: 'center' },
+  emptySub: { color: Colors.textSecondary, fontSize: FontSize.md, textAlign: 'center', marginTop: 12, lineHeight: 22 },
 });

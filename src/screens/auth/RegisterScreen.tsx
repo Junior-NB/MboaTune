@@ -51,7 +51,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <LinearGradient
-        colors={[Colors.surfaceLight, Colors.background]}
+        colors={Colors.gradientDark}
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -68,7 +68,6 @@ export default function RegisterScreen() {
               <Image 
                 source={require('../../assets/images/logo.jpg')} 
                 style={styles.logoImage} 
-                resizeMode="contain"
               />
             </View>
             <Text style={styles.title}>Créer un compte</Text>
@@ -138,19 +137,18 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   logoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 10,
-    elevation: 6,
-    shadowColor: '#00BCD4',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    marginBottom: Spacing.md,
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+    marginBottom: Spacing.xl,
+    borderRadius: 32,
   },
   logoImage: {
-    width: 140,
-    height: 85,
+    width: 120,
+    height: 120,
+    borderRadius: 32,
   },
   title: {
     fontSize: 28,

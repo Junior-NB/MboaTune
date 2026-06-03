@@ -34,12 +34,11 @@ export default function SplashScreen() {
   }));
 
   return (
-    <LinearGradient colors={['#0D1B2A', Colors.background]} style={styles.container}>
+    <LinearGradient colors={Colors.gradientDark} style={styles.container}>
       <Animated.View style={[styles.logoContainer, animatedStyle]}>
         <Image 
           source={require('../assets/images/logo.jpg')} 
           style={styles.logoImage} 
-          resizeMode="contain"
         />
       </Animated.View>
       <Text style={styles.subtitle}>Musique en ligne & hors ligne</Text>
@@ -55,18 +54,17 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
-    elevation: 10,
-    shadowColor: '#00BCD4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 30,
+    elevation: 15,
+    borderRadius: 40,
   },
   logoImage: {
-    width: 220,
-    height: 140,
+    width: 180,
+    height: 180,
+    borderRadius: 40,
   },
   subtitle: {
     fontSize: FontSize.sm,
@@ -76,4 +74,3 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 });
-

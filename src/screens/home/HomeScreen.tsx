@@ -9,12 +9,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../theme/colors';
 import { Spacing, BorderRadius, FontSize } from '../../theme/spacing';
-import {
-  mockArtists, mockAlbums, mockTracks, editorialPlaylists, recentItems,
-} from '../../data/mockData';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
 import ProfileDrawerModal from '../../components/ProfileDrawerModal';
+import { supabase } from '../../lib/supabase';
+import type { Track } from '../../types/database';
 
 const { width } = Dimensions.get('window');
 
@@ -22,17 +21,34 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const { playTrack, currentTrack, recentTracks, isPlaying, togglePlayPause } = usePlayerStore();
   const { profile } = useAuthStore();
+  const [dbTracks, setDbTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('Tout');
+
+  React.useEffect(() => {
+    const fetchTracks = async () => {
+      const { data, error } = await supabase
+        .from('tracks')
+        .select('*, artist:artists(*), album:albums(*)')
+        .limit(10);
+      
+      if (data && !error) {
+        setDbTracks(data as Track[]);
+      }
+      setLoading(false);
+    };
+    fetchTracks();
+  }, []);
   
-  const featuredTrack = currentTrack || mockTracks[0];
-  const isFeaturedPlaying = currentTrack?.id === featuredTrack.id && isPlaying;
+  const featuredTrack = currentTrack || (dbTracks.length > 0 ? dbTracks[0] : null);
+  const isFeaturedPlaying = currentTrack?.id === featuredTrack?.id && isPlaying;
 
   const handleFeaturedPlay = () => {
+    if (!featuredTrack) return;
     if (currentTrack?.id === featuredTrack.id) {
       togglePlayPause();
     } else {
-      playTrack(featuredTrack, mockTracks);
+      playTrack(featuredTrack, dbTracks);
     }
   };
 
@@ -47,58 +63,11 @@ export default function HomeScreen() {
     (navigation as any).navigate('Album', { albumId: album.id });
   };
 
-  // Section horizontale d'albums/playlists (style Spotify)
-  const renderHorizontalCard = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.albumCard}
-      activeOpacity={0.7}
-      onPress={() => handlePlayAlbum(item)}
-    >
-      <Image source={{ uri: item.cover_path }} style={styles.albumImage} />
-      <Text style={styles.albumTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.albumSubtitle} numberOfLines={1}>
-        {item.artist?.name || 'Artiste'}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  // Section horizontale d'artistes (ronds, style Spotify)
-  const renderArtistCircle = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.artistCircle}
-      activeOpacity={0.7}
-      onPress={() => (navigation as any).navigate('Artist', { artistId: item.id })}
-    >
-      <Image source={{ uri: item.avatar_path }} style={styles.artistAvatar} />
-      <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
-      <Text style={styles.artistType}>Artiste</Text>
-    </TouchableOpacity>
-  );
-
-  // Section horizontale de playlists éditoriales
-  const renderEditorial = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.albumCard}
-      activeOpacity={0.7}
-      onPress={() => {
-        if (item.tracks?.length) {
-          playTrack(item.tracks[0], item.tracks);
-        }
-      }}
-    >
-      <Image source={{ uri: item.cover }} style={styles.albumImage} />
-      <Text style={styles.albumTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.albumSubtitle} numberOfLines={2}>
-        {item.description}
-      </Text>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <LinearGradient
-        colors={['#17221A', '#0F1511', '#0F1511']}
+        colors={Colors.gradientDark}
         locations={[0, 0.4, 1]}
         style={styles.container}
       >
@@ -110,20 +79,26 @@ export default function HomeScreen() {
           {/* ─── HEADER ─── */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.logoText}>Mboa<Text style={{color: Colors.primary}}>Tune</Text></Text>
+              <Text style={styles.logoText}>Mboa<Text style={{ color: Colors.accent }}>Tune</Text></Text>
               <Text style={styles.greetingSub}>{getGreeting()},</Text>
               <Text style={styles.greetingName}>
-                {profile?.username || 'Utilisateur'} 👋
+                {profile?.username || 'Utilisateur'}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.avatar}
               onPress={() => setShowProfileDrawer(true)}
             >
-              <Text style={styles.avatarText}>
-                {profile?.username?.[0]?.toUpperCase() || 'U'}
-              </Text>
+              <LinearGradient
+                colors={Colors.gradientAccent}
+                style={styles.avatar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.avatarText}>
+                  {profile?.username?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
@@ -134,33 +109,47 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitleSmall}>EN CE MOMENT</Text>
             </View>
 
-            <TouchableOpacity 
-              activeOpacity={0.9} 
-              style={styles.featuredCard}
-              onPress={handleFeaturedPlay}
-            >
-              <LinearGradient
-                colors={['rgba(216,127,48,0.2)', 'rgba(216,127,48,0.05)']}
-                style={styles.featuredGradient}
+            {featuredTrack ? (
+              <TouchableOpacity 
+                activeOpacity={0.9} 
+                style={styles.featuredCard}
+                onPress={handleFeaturedPlay}
               >
-                <View style={styles.featuredContent}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.featuredTag}>
-                      <Icon name="musical-notes" size={12} color={Colors.primary} />
-                      <Text style={styles.featuredTagText}>TITRE À L'HONNEUR</Text>
+                <LinearGradient
+                  colors={Colors.gradientCard}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.featuredGradient}
+                >
+                  <View style={styles.featuredContent}>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.featuredTag}>
+                        <Icon name="musical-notes" size={14} color={Colors.accentLight} />
+                        <Text style={styles.featuredTagText}>TITRE À L'HONNEUR</Text>
+                      </View>
+                      <Text style={styles.featuredTitle} numberOfLines={2}>{featuredTrack.title}</Text>
+                      <Text style={styles.featuredSubtitle} numberOfLines={1}>{featuredTrack.artist?.name || 'Artiste inconnu'}</Text>
                     </View>
-                    <Text style={styles.featuredTitle} numberOfLines={2}>{featuredTrack.title}</Text>
-                    <Text style={styles.featuredSubtitle} numberOfLines={1}>{featuredTrack.artist?.name || 'Artiste inconnu'}</Text>
+                    <TouchableOpacity 
+                      onPress={handleFeaturedPlay}
+                    >
+                      <LinearGradient
+                        colors={Colors.gradientAccent}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.playButtonLarge}
+                      >
+                        <Icon name={isFeaturedPlaying ? "pause" : "play"} size={24} color="#FFF" style={!isFeaturedPlaying ? { marginLeft: 3 } : {}} />
+                      </LinearGradient>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.playButtonLarge}
-                    onPress={handleFeaturedPlay}
-                  >
-                    <Icon name={isFeaturedPlaying ? "pause" : "play"} size={24} color="#000" style={!isFeaturedPlaying ? { marginLeft: 3 } : {}} />
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.featuredCard, { padding: 20, alignItems: 'center' }]}>
+                <Text style={{color: Colors.textMuted}}>Chargement des titres...</Text>
+              </View>
+            )}
           </View>
 
           {/* ─── GENRES POPULAIRES ─── */}
@@ -171,13 +160,13 @@ export default function HomeScreen() {
             </View>
             <View style={styles.genreGrid}>
               {[
-                { title: 'Afrobeat Gold', color: '#B84335', icon: 'musical-notes' },
-                { title: 'Highlife Legends', color: '#247D68', icon: 'star' },
-                { title: 'Amapiano Wave', color: '#B4931A', icon: 'headset' },
-                { title: 'Coupé Décalé', color: '#28588A', icon: 'radio' },
+                { title: 'Afrobeat Gold', color: Colors.categories[0], icon: 'musical-notes' },
+                { title: 'Highlife Legends', color: Colors.categories[1], icon: 'star' },
+                { title: 'Amapiano Wave', color: Colors.categories[2], icon: 'headset' },
+                { title: 'Coupé Décalé', color: Colors.categories[3], icon: 'radio' },
               ].map((genre, idx) => (
                 <TouchableOpacity key={idx} style={[styles.genreCard, { backgroundColor: genre.color }]}>
-                  <Icon name={genre.icon} size={32} color="#fff" style={styles.genreIcon} />
+                  <Icon name={genre.icon} size={36} color="rgba(255,255,255,0.8)" style={styles.genreIcon} />
                   <Text style={styles.genreText}>{genre.title}</Text>
                 </TouchableOpacity>
               ))}
@@ -192,14 +181,14 @@ export default function HomeScreen() {
               </View>
               <View style={styles.genreGrid}>
                 {recentTracks.slice(0, 4).map((track) => (
-                  <TouchableOpacity 
-                    key={track.id} 
+                  <TouchableOpacity
+                    key={track.id}
                     style={styles.recentSquareCard}
                     onPress={() => playTrack(track, recentTracks)}
                   >
-                    <Image 
-                      source={{ uri: track.album?.cover_path || 'https://via.placeholder.com/150' }} 
-                      style={styles.recentSquareImage} 
+                    <Image
+                      source={{ uri: track.album?.cover_path || 'https://via.placeholder.com/150' }}
+                      style={styles.recentSquareImage}
                     />
                     <Text style={styles.recentSquareText} numberOfLines={2}>{track.title}</Text>
                   </TouchableOpacity>
@@ -239,48 +228,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingTop: Spacing.xl,
-    paddingBottom: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
   logoText: {
     color: Colors.primary,
-    fontSize: 22,
+    fontSize: FontSize.xxl,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     marginBottom: 8,
   },
   greetingSub: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: FontSize.md,
   },
   greetingName: {
     color: Colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: FontSize.xxxl,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatarText: {
-    color: '#121212',
-    fontSize: 16,
+    color: '#FFF',
+    fontSize: FontSize.lg,
     fontWeight: 'bold',
   },
 
   /* Featured Card */
   featuredCard: {
-    borderRadius: 16,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   featuredGradient: {
-    padding: Spacing.lg,
+    padding: Spacing.xl,
   },
   featuredContent: {
     flexDirection: 'row',
@@ -293,56 +292,57 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   featuredTagText: {
-    color: Colors.primary,
-    fontSize: 10,
+    color: Colors.accentLight,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
-    marginLeft: 4,
+    letterSpacing: 1.5,
+    marginLeft: 6,
   },
   featuredTitle: {
     color: Colors.textPrimary,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     marginBottom: 4,
-    lineHeight: 28,
+    lineHeight: 30,
   },
   featuredSubtitle: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: FontSize.sm,
+    fontWeight: '500',
   },
   playButtonLarge: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: Colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   /* Sections */
   section: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.xl + 8,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   sectionLine: {
-    width: 12,
-    height: 2,
-    backgroundColor: Colors.textSecondary,
-    marginRight: 8,
+    width: 16,
+    height: 3,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+    marginRight: 10,
   },
   sectionTitleSmall: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1.5,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 2,
     color: Colors.textSecondary,
     textTransform: 'uppercase',
   },
@@ -355,38 +355,44 @@ const styles = StyleSheet.create({
   },
   genreCard: {
     width: (width - 48 - 16) / 2, // padding horizontal 24*2 + gap 16
-    height: 110,
-    borderRadius: 12,
-    padding: Spacing.md,
+    height: 120,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
     marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   genreIcon: {
     position: 'absolute',
-    bottom: -10,
-    right: -10,
-    opacity: 0.3,
+    bottom: -8,
+    right: -8,
+    opacity: 0.4,
     transform: [{ rotate: '-15deg' }],
   },
   genreText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  
+
   recentSquareCard: {
     width: (width - 48 - 16) / 2,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   recentSquareImage: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   recentSquareText: {
     color: Colors.textPrimary,

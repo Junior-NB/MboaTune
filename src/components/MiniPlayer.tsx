@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { useProgress } from 'react-native-track-player';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
@@ -40,51 +41,58 @@ export default function MiniPlayer() {
       style={[styles.container, { bottom: 60 + insets.bottom }]}
       onPress={() => navigation.navigate('PlayerModal')}
     >
-      <View style={styles.content}>
-        {currentTrack.album?.cover_path && currentTrack.album.cover_path.includes('placeholder.com') ? (
-          <View style={[styles.cover, { backgroundColor: '#1E3264', justifyContent: 'center', alignItems: 'center' }]}>
-            <Icon name="musical-notes" size={20} color="#FFF" />
+      <LinearGradient
+        colors={['#1F2937', '#374151']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradient}
+      >
+        <View style={styles.content}>
+          {currentTrack.album?.cover_path && currentTrack.album.cover_path.includes('placeholder.com') ? (
+            <View style={[styles.cover, { backgroundColor: Colors.surfaceLight, justifyContent: 'center', alignItems: 'center' }]}>
+              <Icon name="musical-notes" size={20} color={Colors.primary} />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: currentTrack.album?.cover_path || 'https://via.placeholder.com/150' }}
+              style={styles.cover}
+            />
+          )}
+          <View style={styles.textContainer}>
+            <Text style={styles.title} numberOfLines={1}>
+              {currentTrack.title}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {currentTrack.artist?.name || 'Artiste inconnu'}
+            </Text>
           </View>
-        ) : (
-          <Image
-            source={{ uri: currentTrack.album?.cover_path || 'https://via.placeholder.com/150' }}
-            style={styles.cover}
-          />
-        )}
-        <View style={styles.textContainer}>
-          <Text style={styles.title} numberOfLines={1}>
-            {currentTrack.title}
-          </Text>
-          <Text style={styles.artist} numberOfLines={1}>
-            {currentTrack.artist?.name || 'Artiste inconnu'}
-          </Text>
+
+          {/* Like button */}
+          <TouchableOpacity style={styles.controlButton} onPress={handleToggleLike}>
+            <Icon
+              name={liked ? 'heart' : 'heart-outline'}
+              size={22}
+              color={liked ? Colors.accent : Colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.controlButton} onPress={togglePlayPause}>
+            <Icon
+              name={isPlaying ? "pause" : "play"}
+              size={26}
+              color="#fff"
+            />
+          </TouchableOpacity>
         </View>
-
-        {/* Devices icon */}
-        <TouchableOpacity style={styles.controlButton}>
-          <Icon name="desktop-outline" size={20} color="#b3b3b3" />
-        </TouchableOpacity>
-
-        {/* Like button */}
-        <TouchableOpacity style={styles.controlButton} onPress={handleToggleLike}>
-          <Icon
-            name={liked ? 'heart' : 'heart-outline'}
-            size={24}
-            color={liked ? '#1DB954' : '#fff'}
+        <View style={styles.progressBackground}>
+          <LinearGradient
+            colors={[Colors.primary, Colors.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${progressPercent}%` }]}
           />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.controlButton} onPress={togglePlayPause}>
-          <Icon
-            name={isPlaying ? "pause" : "play"}
-            size={28}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.progressBackground}>
-        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-      </View>
+        </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
@@ -92,17 +100,20 @@ export default function MiniPlayer() {
 const styles = StyleSheet.create({
   container: {
     height: MINI_PLAYER_HEIGHT,
-    backgroundColor: '#4A3B39',
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
     position: 'absolute',
     bottom: 50,
     left: Spacing.sm,
     right: Spacing.sm,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
+    elevation: 10,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+  },
+  gradient: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -111,8 +122,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
   },
   cover: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: BorderRadius.sm,
   },
   textContainer: {
@@ -126,7 +137,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   artist: {
-    color: Colors.textSecondary,
+    color: Colors.textMuted,
     fontSize: FontSize.xs,
     marginTop: 2,
   },
@@ -134,14 +145,13 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   progressBackground: {
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    height: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     width: '100%',
     position: 'absolute',
     bottom: 0,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.textPrimary,
   },
 });

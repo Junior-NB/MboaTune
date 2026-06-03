@@ -17,7 +17,7 @@ import { Spacing, BorderRadius, FontSize, IconSize } from '../../theme/spacing';
 import TrackOptionsModal from '../../components/TrackOptionsModal';
 
 const { width } = Dimensions.get('window');
-const ARTWORK_SIZE = width - 48;
+const ARTWORK_SIZE = width - 64; // Slightly smaller for more elegant look
 
 export default function PlayerScreen() {
   const navigation = useNavigation();
@@ -67,7 +67,7 @@ export default function PlayerScreen() {
   if (!currentTrack) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Icon name="musical-notes-outline" size={64} color="#535353" />
+        <Icon name="musical-notes-outline" size={64} color={Colors.textMuted} />
         <Text style={styles.emptyText}>Aucun titre en cours</Text>
       </View>
     );
@@ -79,8 +79,8 @@ export default function PlayerScreen() {
 
   return (
     <LinearGradient
-      colors={['#281E15', '#0F1511', '#0F1511']}
-      locations={[0, 0.4, 1]}
+      colors={['#1F2937', '#111827', '#111827']}
+      locations={[0, 0.5, 1]}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -88,28 +88,30 @@ export default function PlayerScreen() {
       {/* ─── HEADER ─── */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icon name="chevron-down" size={28} color={Colors.textSecondary} />
+          <Icon name="chevron-down" size={32} color={Colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerLabel}>EN ÉCOUTE</Text>
         </View>
         <TouchableOpacity onPress={() => setShowOptions(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icon name="ellipsis-horizontal" size={22} color={Colors.textSecondary} />
+          <Icon name="ellipsis-horizontal" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
       </Animated.View>
 
       {/* ─── POCHETTE ─── */}
       <Animated.View entering={FadeIn.duration(500).delay(200)} style={styles.artworkContainer}>
-        {hasLocalCover ? (
-          <View style={styles.artworkPlaceholder}>
-            <Icon name="musical-notes" size={80} color="#535353" />
-          </View>
-        ) : (
-          <Image
-            source={{ uri: currentTrack.album?.cover_path }}
-            style={styles.artwork}
-          />
-        )}
+        <View style={styles.artworkWrapper}>
+          {hasLocalCover ? (
+            <View style={styles.artworkPlaceholder}>
+              <Icon name="musical-notes" size={80} color={Colors.primaryLight} />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: currentTrack.album?.cover_path }}
+              style={styles.artwork}
+            />
+          )}
+        </View>
       </Animated.View>
 
       {/* ─── INFOS ─── */}
@@ -120,14 +122,14 @@ export default function PlayerScreen() {
             {currentTrack.artist?.name || 'Artiste inconnu'}
           </Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
           <TouchableOpacity onPress={handleDownload}>
             {downloading ? (
               <ActivityIndicator size="small" color={Colors.primary} />
             ) : (
               <Icon
                 name={downloaded ? 'checkmark-circle' : 'download-outline'}
-                size={26}
+                size={28}
                 color={downloaded ? Colors.primary : Colors.textPrimary}
               />
             )}
@@ -135,8 +137,8 @@ export default function PlayerScreen() {
           <TouchableOpacity onPress={handleToggleLike}>
             <Icon
               name={liked ? 'heart' : 'heart-outline'}
-              size={26}
-              color={liked ? Colors.primary : Colors.textPrimary}
+              size={28}
+              color={liked ? Colors.accent : Colors.textPrimary}
             />
           </TouchableOpacity>
         </View>
@@ -151,8 +153,8 @@ export default function PlayerScreen() {
           maximumValue={progress.duration || 1}
           onSlidingComplete={(value) => seekTo(value)}
           minimumTrackTintColor={Colors.primary}
-          maximumTrackTintColor="rgba(255,255,255,0.1)"
-          thumbTintColor={Colors.primary}
+          maximumTrackTintColor={Colors.surfaceLight}
+          thumbTintColor={Colors.accent}
         />
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatTime(progress.position)}</Text>
@@ -165,32 +167,39 @@ export default function PlayerScreen() {
         <TouchableOpacity onPress={toggleShuffle}>
           <Icon
             name="shuffle"
-            size={24}
+            size={26}
             color={isShuffle ? Colors.primary : Colors.textMuted}
           />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={skipToPrevious}>
-          <Icon name="play-skip-back" size={32} color={Colors.textPrimary} />
+          <Icon name="play-skip-back" size={36} color={Colors.textPrimary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
-          <Icon
-            name={isPlaying ? 'pause' : 'play'}
-            size={36}
-            color="#121212"
-            style={!isPlaying ? { marginLeft: 3 } : undefined}
-          />
+        <TouchableOpacity onPress={togglePlayPause}>
+          <LinearGradient
+            colors={Colors.gradientAccent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.playButton}
+          >
+            <Icon
+              name={isPlaying ? 'pause' : 'play'}
+              size={36}
+              color="#FFF"
+              style={!isPlaying ? { marginLeft: 4 } : undefined}
+            />
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={skipToNext}>
-          <Icon name="play-skip-forward" size={32} color={Colors.textPrimary} />
+          <Icon name="play-skip-forward" size={36} color={Colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={toggleRepeat} style={{ position: 'relative' }}>
           <Icon
             name="repeat"
-            size={24}
+            size={26}
             color={repeatMode !== 'off' ? Colors.primary : Colors.textMuted}
           />
           {repeatMode === 'track' && (
@@ -204,7 +213,7 @@ export default function PlayerScreen() {
       {/* ─── PROCHAINS TITRES ─── */}
       <Animated.View entering={SlideInDown.duration(500).delay(600)} style={styles.upNextContainer}>
         <View style={styles.upNextHeader}>
-          <Icon name="musical-notes" size={16} color={Colors.textSecondary} />
+          <Icon name="musical-notes" size={16} color={Colors.primary} />
           <Text style={styles.upNextTitle}>PROCHAIN TITRE</Text>
         </View>
         <View style={styles.upNextCard}>
@@ -238,12 +247,12 @@ export default function PlayerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingHorizontal: 32,
+    paddingTop: 56,
   },
   emptyText: {
-    color: '#b3b3b3',
-    fontSize: 16,
+    color: Colors.textMuted,
+    fontSize: FontSize.lg,
     marginTop: 16,
   },
 
@@ -252,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   headerCenter: {
     alignItems: 'center',
@@ -262,26 +271,33 @@ const styles = StyleSheet.create({
   headerLabel: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 2,
   },
 
   /* Pochette */
   artworkContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
+  },
+  artworkWrapper: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 12,
   },
   artwork: {
     width: ARTWORK_SIZE,
     height: ARTWORK_SIZE,
-    borderRadius: 8,
-    backgroundColor: '#282828',
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.surface,
   },
   artworkPlaceholder: {
     width: ARTWORK_SIZE,
     height: ARTWORK_SIZE,
-    borderRadius: 8,
-    backgroundColor: '#282828',
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -299,33 +315,34 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.textPrimary,
-    fontSize: 26,
+    fontSize: FontSize.xxxl,
     fontWeight: '800',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   artist: {
     color: Colors.textSecondary,
-    fontSize: 16,
+    fontSize: FontSize.lg,
     fontWeight: '500',
   },
 
   /* Progression */
   progressContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   slider: {
     width: '100%',
-    height: 20,
+    height: 40,
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: -4,
+    marginTop: -10,
+    paddingHorizontal: 16,
   },
   timeText: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
   },
 
   /* Contrôles */
@@ -333,31 +350,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   playButton: {
-    width: 72,
-    height: 72,
-    backgroundColor: Colors.primary,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
 
   /* Prochains titres */
   upNextContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     marginTop: 'auto',
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   upNextHeader: {
     flexDirection: 'row',
@@ -365,10 +384,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   upNextTitle: {
-    color: Colors.textSecondary,
+    color: Colors.primary,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+    fontWeight: '800',
+    letterSpacing: 2,
     marginLeft: 8,
   },
   upNextCard: {
@@ -376,10 +395,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   upNextIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: Colors.categories[3],
+    width: 50,
+    height: 50,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surfaceHighlight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -389,28 +408,30 @@ const styles = StyleSheet.create({
   },
   upNextTrackName: {
     color: Colors.textPrimary,
-    fontSize: 14,
+    fontSize: FontSize.md,
     fontWeight: '700',
   },
   upNextTrackArtist: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: FontSize.sm,
     marginTop: 2,
   },
   repeatBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#121212',
-    borderRadius: 8,
-    width: 14,
-    height: 14,
+    top: -6,
+    right: -6,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 10,
+    width: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary,
   },
   repeatBadgeText: {
-    color: Colors.primary,
-    fontSize: 8,
+    color: Colors.textPrimary,
+    fontSize: 9,
     fontWeight: 'bold',
   },
 });

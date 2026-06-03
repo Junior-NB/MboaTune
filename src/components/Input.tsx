@@ -11,15 +11,22 @@ interface InputProps extends TextInputProps {
 
 export default function Input({ label, error, style, secureTextEntry, ...props }: InputProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputContainer, error ? styles.inputError : null]}>
+      <View style={[
+        styles.inputContainer, 
+        error ? styles.inputError : null,
+        isFocused && styles.inputFocused,
+      ]}>
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={Colors.textMuted}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           {...props}
         />
         {secureTextEntry && (
@@ -46,20 +53,25 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    color: Colors.textPrimary,
-    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
     fontWeight: '600',
     marginBottom: Spacing.xs,
     marginLeft: Spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputContainer: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  inputFocused: {
+    borderColor: Colors.primary,
   },
   inputError: {
     borderColor: Colors.error,
@@ -68,8 +80,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.textPrimary,
     fontSize: FontSize.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
   },
   eyeIcon: {
     padding: Spacing.md,

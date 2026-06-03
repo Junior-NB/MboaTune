@@ -62,7 +62,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <LinearGradient
-        colors={[Colors.surfaceLight, Colors.background]}
+        colors={Colors.gradientDark}
         style={styles.container}
       >
         <View style={styles.header}>
@@ -70,7 +70,6 @@ export default function LoginScreen() {
             <Image 
               source={require('../../assets/images/logo.jpg')} 
               style={styles.logoImage} 
-              resizeMode="contain"
             />
           </View>
         </View>
@@ -141,20 +140,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxxl,
   },
   logoCard: {
-    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    elevation: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowColor: '#06B6D4', // Cyan pour matcher le néon du logo
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+    borderRadius: 32,
   },
   logoImage: {
-    width: 180,
-    height: 110,
+    width: 140,
+    height: 140,
+    borderRadius: 32,
   },
   logoText: {
     color: Colors.primary,

@@ -197,9 +197,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#282828',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingBottom: Spacing.xl,
     maxHeight: height * 0.7,
   },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: Colors.border,
   },
   dragHandle: {
     width: 40,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   trackArtist: {
-    color: '#b3b3b3',
+    color: Colors.textSecondary,
     fontSize: 14,
     marginTop: 4,
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: Colors.border,
   },
   playlistTitle: {
     color: '#fff',
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#b3b3b3',
+    color: Colors.textMuted,
     fontSize: 15,
   },
 });

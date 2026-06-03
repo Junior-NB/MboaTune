@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import { Colors } from '../../theme/colors';
 import { Spacing, BorderRadius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { usePlayerStore } from '../../store/playerStore';
-import { mockCategories, mockTracks } from '../../data/mockData';
+import { mockCategories } from '../../data/mockData';
 import ProfileDrawerModal from '../../components/ProfileDrawerModal';
 import { useSearchStore } from '../../store/searchStore';
 import type { Track } from '../../types/database';
@@ -18,8 +19,8 @@ import TrackOptionsModal from '../../components/TrackOptionsModal';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 2;
-const CARD_GAP = 8;
-const CARD_WIDTH = (width - Spacing.md * 2 - CARD_GAP) / COLUMN_COUNT;
+const CARD_GAP = 12;
+const CARD_WIDTH = (width - Spacing.lg * 2 - CARD_GAP) / COLUMN_COUNT;
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,20 +42,7 @@ export default function SearchScreen() {
 
     setIsSearching(true);
 
-    // Recherche locale dans les mocks d'abord
-    const localResults = mockTracks.filter(t =>
-      t.title.toLowerCase().includes(query.toLowerCase()) ||
-      t.artist?.name?.toLowerCase().includes(query.toLowerCase())
-    );
-
-    if (localResults.length > 0) {
-      setSearchResults(localResults);
-      setIsSearching(false);
-      searchStore?.addRecentSearch?.(query);
-      return;
-    }
-
-    // Sinon essai Supabase
+    // Recherche dans Supabase
     const { data, error } = await supabase
       .from('tracks')
       .select('*, artist:artists(*), album:albums(*)')
@@ -72,35 +60,41 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
       <View style={styles.container}>
 
         {/* ─── HEADER ─── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity
-              style={styles.avatar}
               onPress={() => setShowProfileDrawer(true)}
             >
-              <Text style={styles.avatarText}>
-                {profile?.username?.[0]?.toUpperCase() || 'U'}
-              </Text>
+              <LinearGradient
+                colors={Colors.gradientAccent}
+                style={styles.avatar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.avatarText}>
+                  {profile?.username?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Rechercher</Text>
           </View>
           <TouchableOpacity>
-            <Icon name="camera-outline" size={26} color="#fff" />
+            <Icon name="camera-outline" size={28} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
         {/* ─── BARRE DE RECHERCHE ─── */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <Icon name="search" size={20} color="#121212" />
+            <Icon name="search" size={22} color={Colors.textSecondary} />
             <TextInput
               style={styles.searchInputText}
               placeholder="Que souhaitez-vous écouter ?"
-              placeholderTextColor="#535353"
+              placeholderTextColor={Colors.textMuted}
               value={searchQuery}
               onChangeText={handleSearch}
             />
@@ -146,7 +140,7 @@ export default function SearchScreen() {
                       </Text>
                     </View>
                     <TouchableOpacity onPress={() => setOptionsTrack(track)} style={{ padding: 8 }}>
-                      <Icon name="ellipsis-vertical" size={20} color="#b3b3b3" />
+                      <Icon name="ellipsis-vertical" size={20} color={Colors.textMuted} />
                     </TouchableOpacity>
                   </TouchableOpacity>
                 ))
@@ -169,10 +163,10 @@ export default function SearchScreen() {
                       style={styles.recentSearchItem}
                       onPress={() => handleSearch(term)}
                     >
-                      <Icon name="time-outline" size={24} color="#b3b3b3" />
+                      <Icon name="time-outline" size={24} color={Colors.textSecondary} />
                       <Text style={styles.recentSearchText}>{term}</Text>
                       <TouchableOpacity onPress={() => searchStore?.removeRecentSearch?.(term)}>
-                        <Icon name="close" size={20} color="#b3b3b3" />
+                        <Icon name="close" size={22} color={Colors.textSecondary} />
                       </TouchableOpacity>
                     </TouchableOpacity>
                   ))}
@@ -217,7 +211,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
@@ -226,8 +220,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
   headerLeft: {
@@ -235,42 +229,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#b388ff',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   avatarText: {
-    color: '#000',
-    fontSize: 14,
+    color: '#FFF',
+    fontSize: FontSize.md,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
   },
 
   /* Barre de recherche */
   searchContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    height: 48,
-    paddingHorizontal: 12,
-    gap: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    height: 52,
+    paddingHorizontal: Spacing.md,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   searchInputText: {
-    color: '#000',
-    fontSize: 15,
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
     fontWeight: '500',
     flex: 1,
     height: '100%',
@@ -278,15 +273,15 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
   },
 
   sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 14,
+    color: Colors.textPrimary,
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+    marginBottom: Spacing.md,
   },
 
   /* Catégories */
@@ -297,93 +292,105 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: CARD_WIDTH,
-    height: 100,
-    borderRadius: 8,
-    padding: 12,
+    height: 110,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   categoryName: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: FontSize.md,
+    fontWeight: '800',
     zIndex: 2,
+    letterSpacing: 0.5,
   },
   categoryImage: {
     position: 'absolute',
-    bottom: -4,
-    right: -12,
-    width: 70,
-    height: 70,
-    borderRadius: 4,
+    bottom: -8,
+    right: -16,
+    width: 76,
+    height: 76,
+    borderRadius: BorderRadius.sm,
     transform: [{ rotate: '25deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
   },
 
   /* Résultats */
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   resultImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 4,
-    backgroundColor: '#282828',
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
   },
   resultInfo: {
-    marginLeft: 12,
+    marginLeft: 16,
     flex: 1,
   },
   resultTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
+    fontWeight: '700',
   },
   resultSubtitle: {
-    color: '#b3b3b3',
-    fontSize: 13,
-    marginTop: 2,
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    marginTop: 4,
   },
   noResultContainer: {
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 48,
   },
   noResultTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    color: Colors.textPrimary,
+    fontSize: FontSize.lg,
+    fontWeight: '800',
     marginBottom: 8,
     textAlign: 'center',
   },
   noResultSub: {
-    color: '#b3b3b3',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
     textAlign: 'center',
   },
   recentSearchesContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   recentSearchesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   clearText: {
-    color: '#b3b3b3',
-    fontSize: 14,
-    marginBottom: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    marginBottom: Spacing.md,
   },
   recentSearchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   recentSearchText: {
-    color: '#fff',
-    fontSize: 16,
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
     flex: 1,
     marginLeft: 16,
+    fontWeight: '500',
   },
 });

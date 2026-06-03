@@ -9,8 +9,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { usePlayerStore } from '../../store/playerStore';
 import { useLibraryStore } from '../../store/libraryStore';
 import { useAuthStore } from '../../store/authStore';
-import { mockTracks, mockAlbums, mockArtists } from '../../data/mockData';
-
+import { supabase } from '../../lib/supabase';
 type AlbumScreenRoute = RouteProp<{ Album: { albumId: string } }, 'Album'>;
 
 export default function AlbumScreen() {
@@ -21,9 +20,28 @@ export default function AlbumScreen() {
   const { isTrackLiked, toggleLikeTrack } = useLibraryStore();
   const { user } = useAuthStore();
 
-  const album = mockAlbums.find(a => a.id === albumId);
-  const artist = album ? mockArtists.find(a => a.id === album.artist_id) : null;
-  const albumTracks = mockTracks.filter(t => t.album_id === albumId);
+  const [album, setAlbum] = React.useState<any>(null);
+  const [artist, setArtist] = React.useState<any>(null);
+  const [albumTracks, setAlbumTracks] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchAlbumData = async () => {
+      setLoading(true);
+      const { data: albumData } = await supabase.from('albums').select('*').eq('id', albumId).single();
+      if (albumData) {
+        setAlbum(albumData);
+        if (albumData.artist_id) {
+          const { data: artistData } = await supabase.from('artists').select('*').eq('id', albumData.artist_id).single();
+          if (artistData) setArtist(artistData);
+        }
+        const { data: tracksData } = await supabase.from('tracks').select('*, artist:artists(*), album:albums(*)').eq('album_id', albumId);
+        if (tracksData) setAlbumTracks(tracksData);
+      }
+      setLoading(false);
+    };
+    fetchAlbumData();
+  }, [albumId]);
 
   if (!album) {
     return (
@@ -32,7 +50,9 @@ export default function AlbumScreen() {
           <Icon name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#b3b3b3', fontSize: 16 }}>Album introuvable</Text>
+          <Text style={{ color: '#b3b3b3', fontSize: 16 }}>
+            {loading ? 'Chargement...' : 'Album introuvable'}
+          </Text>
         </View>
       </SafeAreaView>
     );

@@ -1,54 +1,55 @@
-// Charte graphique MboaTune — Thème "Ubuntu" (Vert foncé, Orange doré)
+// Charte graphique MboaTune — Thème Premium Violet/Rose
 export const Colors = {
   // Couleurs principales
-  primary: '#D87F30',       // Orange doré (Bouton play, icônes actives)
-  primaryDark: '#B8621B',
-  primaryLight: '#F0A050',
-  accent: '#D87F30',        
-  accentLight: '#F0A050',
+  primary: '#8B5CF6',       // Violet (Accent principal)
+  primaryDark: '#7C3AED',
+  primaryLight: '#A78BFA',
+  accent: '#EC4899',        // Rose
+  accentLight: '#F472B6',
 
   // Fonds
-  background: '#0F1511',    // Vert très foncé / Noir (Fond principal)
-  surface: '#17221A',       // Surface légèrement plus claire
-  surfaceLight: '#1F2E23',  // Pour les cartes
-  surfaceHighlight: '#2A3C2E',
+  background: '#111827',    // Fond principal sombre
+  surface: '#1F2937',       // Surface secondaire
+  surfaceLight: '#374151',  // Pour les cartes
+  surfaceHighlight: '#4B5563',
 
   // Textes
   textPrimary: '#FFFFFF',   // Blanc
-  textSecondary: '#A9BAA3', // Vert-gris clair (Métadonnées)
-  textMuted: '#6B7A6A',     
+  textSecondary: '#D1D5DB', // Gris clair
+  textMuted: '#9CA3AF',     // Gris discret
 
   // Utilitaires
-  error: '#E74C3C',
-  warning: '#F39C12',
-  success: '#D87F30',
-  info: '#3498DB',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  success: '#22C55E',
+  info: '#3B82F6',
 
   // Bordures & séparateurs
-  border: '#2A3C2E',
-  divider: '#17221A',
+  border: '#374151',
+  divider: '#1F2937',
 
   // Overlays
   overlay: 'rgba(0,0,0,0.7)',
   overlayLight: 'rgba(0,0,0,0.4)',
 
   // Gradients
-  gradientDark: ['#0F1511', '#0a0e0b', '#0F1511'] as const,
-  gradientCard: ['rgba(216,127,48,0.3)', 'rgba(15,21,17,0.9)'] as const,
+  gradientDark: ['#111827', '#0F172A', '#111827'],
+  gradientCard: ['rgba(139,92,246,0.25)', 'rgba(17,24,39,0.95)'],
+  gradientAccent: ['#8B5CF6', '#EC4899'],
 
   // Tab bar
-  tabActive: '#D87F30',
-  tabInactive: '#6B7A6A',
+  tabActive: '#FFFFFF',
+  tabInactive: '#9CA3AF',
 
   // Player
-  playerBackground: '#0F1511',
-  playerSlider: '#D87F30',
-  playerSliderInactive: '#2A3C2E',
+  playerBackground: '#111827',
+  playerSlider: '#8B5CF6',
+  playerSliderInactive: '#374151',
 
   // Catégories (pour les grilles)
   categories: [
-    '#B84335', '#247D68', '#6A3C94', '#B4931A',
-    '#A62E5C', '#28588A', '#804E1F', '#4A9A4A',
-    '#9B2883', '#5D8B33', '#C05C23', '#2B6E7D',
+    '#8B5CF6', '#EC4899', '#3B82F6', '#F59E0B',
+    '#10B981', '#EF4444', '#6366F1', '#14B8A6',
+    '#F97316', '#06B6D4', '#A855F7', '#E11D48',
   ] as const,
 };

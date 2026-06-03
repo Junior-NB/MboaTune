@@ -111,7 +111,7 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1a1a1a', Colors.background]} style={styles.gradient}>
+      <LinearGradient colors={Colors.gradientDark} style={styles.gradient}>
         <View style={styles.header}>
           <Text style={styles.title}>Choisissez au moins 3 artistes que vous aimez.</Text>
           <Text style={styles.subtitle}>Nous allons personnaliser votre accueil.</Text>

@@ -12,7 +12,7 @@ import { Spacing, BorderRadius, FontSize } from '../../theme/spacing';
 import { useLibraryStore } from '../../store/libraryStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
-import { mockAlbums, mockArtists, mockTracks } from '../../data/mockData';
+
 import ProfileDrawerModal from '../../components/ProfileDrawerModal';
 import { scanLocalMusic } from '../../utils/localScanner';
 import type { Track } from '../../types/database';
@@ -33,11 +33,28 @@ export default function LibraryScreen() {
   const { playTrack } = usePlayerStore();
   const { user, profile } = useAuthStore();
 
+  const [dbAlbums, setDbAlbums] = useState<any[]>([]);
+  const [dbArtists, setDbArtists] = useState<any[]>([]);
+
   useEffect(() => {
     if (activeTab === 'Sur mon tel') {
       loadLocalMusic();
+    } else if (activeTab === 'Albums' && dbAlbums.length === 0) {
+      loadAlbums();
+    } else if (activeTab === 'Artistes' && dbArtists.length === 0) {
+      loadArtists();
     }
   }, [activeTab]);
+
+  const loadAlbums = async () => {
+    const { data } = await supabase.from('albums').select('*, artist:artists(*)').limit(20);
+    if (data) setDbAlbums(data);
+  };
+
+  const loadArtists = async () => {
+    const { data } = await supabase.from('artists').select('*').limit(20);
+    if (data) setDbArtists(data);
+  };
 
   const loadLocalMusic = async () => {
     try {
@@ -113,7 +130,6 @@ export default function LibraryScreen() {
   };
 
   const availableTracksForPlaylist = [
-    ...mockTracks.filter(t => likedTracks.includes(t.id)),
     ...importedTracks
   ];
 
@@ -128,24 +144,30 @@ export default function LibraryScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity
-              style={styles.avatar}
               onPress={() => setShowProfileDrawer(true)}
             >
-              <Text style={styles.avatarText}>
-                {profile?.display_name?.[0]?.toUpperCase() || 'U'}
-              </Text>
+              <LinearGradient
+                colors={Colors.gradientAccent}
+                style={styles.avatar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.avatarText}>
+                  {profile?.display_name?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Bibliothèque</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.headerIcon}>
-              <Icon name="search" size={24} color="#fff" />
+              <Icon name="search" size={26} color={Colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIcon}
               onPress={() => setShowCreateModal(true)}
             >
-              <Icon name="add" size={28} color="#fff" />
+              <Icon name="add" size={32} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,11 +194,11 @@ export default function LibraryScreen() {
 
         {/* ─── SORT BAR ─── */}
         <View style={styles.sortBar}>
-          <Icon name="swap-vertical" size={16} color="#fff" />
+          <Icon name="swap-vertical" size={18} color={Colors.textPrimary} />
           <Text style={styles.sortText}>Récents</Text>
           <View style={{ flex: 1 }} />
           <TouchableOpacity>
-            <Icon name="grid-outline" size={20} color="#fff" />
+            <Icon name="grid-outline" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -194,15 +216,17 @@ export default function LibraryScreen() {
                 onPress={() => (navigation as any).navigate('LikedTracks')}
               >
                 <LinearGradient
-                  colors={[Colors.primary, '#8e8ee5']}
+                  colors={Colors.gradientAccent}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.likedCover}
                 >
-                  <Icon name="heart" size={20} color="#fff" />
+                  <Icon name="heart" size={24} color="#fff" />
                 </LinearGradient>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemTitle}>Titres likés</Text>
                   <View style={styles.itemMeta}>
-                    <Icon name="push-outline" size={12} color={Colors.primary} />
+                    <Icon name="push-outline" size={14} color={Colors.primary} />
                     <Text style={styles.itemSubtitle}>
                       Playlist · {likedTracks?.length || 0} titres
                     </Text>
@@ -234,22 +258,13 @@ export default function LibraryScreen() {
 
           {activeTab === 'Albums' && (
             <View>
-              {mockAlbums.map(album => (
+              {dbAlbums.map(album => (
                 <TouchableOpacity
                   key={album.id}
                   style={styles.listItem}
                   activeOpacity={0.7}
                   onPress={() => {
-                    const track = {
-                      id: `track-${album.id}`, title: album.title,
-                      artist_id: album.artist_id, album_id: album.id,
-                      duration_ms: 210000,
-                      file_path: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-                      preview_url: null, play_count: 0, is_public: true,
-                      created_at: new Date().toISOString(),
-                      artist: album.artist, album: album,
-                    };
-                    playTrack(track as any);
+                    (navigation as any).navigate('Album', { albumId: album.id });
                   }}
                 >
                   <Image source={{ uri: album.cover_path }} style={styles.artwork} />
@@ -266,8 +281,8 @@ export default function LibraryScreen() {
 
           {activeTab === 'Artistes' && (
             <View>
-              {mockArtists.map(artist => (
-                <TouchableOpacity key={artist.id} style={styles.listItem} activeOpacity={0.7}>
+              {dbArtists.map(artist => (
+                <TouchableOpacity key={artist.id} style={styles.listItem} activeOpacity={0.7} onPress={() => (navigation as any).navigate('Artist', { artistId: artist.id })}>
                   <Image
                     source={{ uri: artist.avatar_path }}
                     style={styles.artistImage}
@@ -300,7 +315,7 @@ export default function LibraryScreen() {
                     style={styles.refreshBtn}
                     onPress={loadLocalMusic}
                   >
-                    <Icon name="refresh" size={20} color="#fff" />
+                    <Icon name="refresh" size={22} color={Colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -356,7 +371,7 @@ export default function LibraryScreen() {
                 value={newPlaylistName}
                 onChangeText={setNewPlaylistName}
                 placeholder="Nom de la playlist"
-                placeholderTextColor="#535353"
+                placeholderTextColor={Colors.textMuted}
                 autoFocus
               />
               
@@ -443,8 +458,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
   headerLeft: {
@@ -452,28 +467,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#b388ff',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   avatarText: {
-    color: '#000',
-    fontSize: 14,
+    color: '#FFF',
+    fontSize: FontSize.md,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   headerIcon: {
     padding: 4,
@@ -481,48 +495,48 @@ const styles = StyleSheet.create({
 
   /* Tabs */
   tabsContainer: {
-    maxHeight: 42,
+    maxHeight: 46,
   },
   tabsContent: {
-    paddingHorizontal: Spacing.md,
-    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    gap: 10,
     alignItems: 'center',
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: Colors.surface,
   },
   tabActive: {
     backgroundColor: Colors.primary,
   },
   tabText: {
-    color: '#fff',
-    fontSize: 13,
+    color: Colors.textPrimary,
+    fontSize: 14,
     fontWeight: '600',
   },
   tabTextActive: {
-    color: '#000',
-    fontWeight: '700',
+    color: '#FFF',
+    fontWeight: '800',
   },
 
   /* Sort bar */
   sortBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    gap: 6,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    gap: 8,
   },
   sortText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   scrollContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
   },
 
@@ -530,53 +544,53 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   artwork: {
-    width: 56,
-    height: 56,
-    borderRadius: 4,
-    backgroundColor: '#282828',
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
   },
   artistImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Colors.surfaceLight,
   },
   likedCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 4,
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
   playlistCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 4,
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
     backgroundColor: Colors.surfaceLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   localCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 4,
-    backgroundColor: '#1E3264',
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
     justifyContent: 'center',
   },
   itemTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 3,
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   itemMeta: {
     flexDirection: 'row',
@@ -584,8 +598,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   itemSubtitle: {
-    color: '#b3b3b3',
-    fontSize: 13,
+    color: Colors.textSecondary,
+    fontSize: 14,
   },
 
   /* Local tab */
@@ -593,37 +607,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   localCount: {
-    color: '#b3b3b3',
-    fontSize: 13,
-    fontWeight: '500',
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   localActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 8,
   },
   importBtnText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   refreshBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -661,31 +675,38 @@ const styles = StyleSheet.create({
   /* Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: Colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 8,
-    padding: 24,
-    width: '85%',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xxl,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
+    color: Colors.textPrimary,
+    fontSize: FontSize.xl,
+    fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   modalInput: {
-    backgroundColor: '#3e3e3e',
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#fff',
-    marginBottom: 24,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   modalActions: {
     flexDirection: 'row',

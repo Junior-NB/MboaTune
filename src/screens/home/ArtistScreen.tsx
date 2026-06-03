@@ -10,8 +10,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { usePlayerStore } from '../../store/playerStore';
 import { useLibraryStore } from '../../store/libraryStore';
 import { useAuthStore } from '../../store/authStore';
-import { mockTracks, mockAlbums, mockArtists } from '../../data/mockData';
-
+import { supabase } from '../../lib/supabase';
 const { width } = Dimensions.get('window');
 type ArtistScreenRoute = RouteProp<{ Artist: { artistId: string } }, 'Artist'>;
 
@@ -23,10 +22,27 @@ export default function ArtistScreen() {
   const { toggleFollowArtist, followedArtists } = useLibraryStore();
   const { user } = useAuthStore();
 
-  const artist = mockArtists.find(a => a.id === artistId);
-  const artistAlbums = mockAlbums.filter(a => a.artist_id === artistId);
-  const artistTracks = mockTracks.filter(t => t.artist_id === artistId);
+  const [artist, setArtist] = React.useState<any>(null);
+  const [artistAlbums, setArtistAlbums] = React.useState<any[]>([]);
+  const [artistTracks, setArtistTracks] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const isFollowing = followedArtists.includes(artistId);
+
+  React.useEffect(() => {
+    const fetchArtistData = async () => {
+      setLoading(true);
+      const { data: artistData } = await supabase.from('artists').select('*').eq('id', artistId).single();
+      if (artistData) {
+        setArtist(artistData);
+        const { data: albumsData } = await supabase.from('albums').select('*').eq('artist_id', artistId);
+        if (albumsData) setArtistAlbums(albumsData);
+        const { data: tracksData } = await supabase.from('tracks').select('*, artist:artists(*), album:albums(*)').eq('artist_id', artistId);
+        if (tracksData) setArtistTracks(tracksData);
+      }
+      setLoading(false);
+    };
+    fetchArtistData();
+  }, [artistId]);
 
   if (!artist) {
     return (
@@ -35,7 +51,9 @@ export default function ArtistScreen() {
           <Icon name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#b3b3b3', fontSize: 16 }}>Artiste introuvable</Text>
+          <Text style={{ color: '#b3b3b3', fontSize: 16 }}>
+            {loading ? 'Chargement...' : 'Artiste introuvable'}
+          </Text>
         </View>
       </SafeAreaView>
     );

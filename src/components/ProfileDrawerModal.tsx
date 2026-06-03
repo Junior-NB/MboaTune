@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors } from '../theme/colors';
-import { Spacing, FontSize } from '../theme/spacing';
+import { Spacing, FontSize, BorderRadius } from '../theme/spacing';
 import { useAuthStore } from '../store/authStore';
 import { useNavigation } from '@react-navigation/native';
 
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   drawer: {
     width: DRAWER_WIDTH,
     height: '100%',
-    backgroundColor: '#121212',
+    backgroundColor: Colors.surface,
     paddingTop: 50,
     paddingHorizontal: Spacing.md,
   },
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   avatarTextLarge: {
-    color: '#000',
+    color: '#FFF',
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: Spacing.sm,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.md,
   },
   menuItem: {
     flexDirection: 'row',

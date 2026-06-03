@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, ScrollView, Alert, SafeAreaView, Tou
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/colors';
-import { Spacing, FontSize } from '../../theme/spacing';
+import { Spacing, FontSize, BorderRadius } from '../../theme/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import Button from '../../components/Button';
@@ -78,10 +78,10 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#282828', Colors.background]} style={styles.container}>
+      <LinearGradient colors={Colors.gradientDark} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-back" size={28} color="#fff" />
+            <Icon name="arrow-back" size={28} color={Colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Paramètres</Text>
           <View style={{ width: 28 }} />
@@ -105,7 +105,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={username}
                 onChangeText={setUsername}
-                placeholderTextColor="#666"
+                placeholderTextColor={Colors.textMuted}
                 placeholder="Votre nom d'utilisateur"
               />
               <Button 
@@ -126,7 +126,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={oldPassword}
                 onChangeText={setOldPassword}
-                placeholderTextColor="#666"
+                placeholderTextColor={Colors.textMuted}
                 placeholder="Ancien mot de passe"
                 secureTextEntry
               />
@@ -136,7 +136,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholderTextColor="#666"
+                placeholderTextColor={Colors.textMuted}
                 placeholder="Nouveau mot de passe"
                 secureTextEntry
               />
@@ -160,6 +160,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -168,59 +169,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: Colors.border,
   },
   backButton: {
     padding: Spacing.xs,
   },
   headerTitle: {
-    color: '#fff',
+    color: Colors.textPrimary,
     fontSize: FontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   content: {
     padding: Spacing.lg,
   },
   sectionTitle: {
-    color: '#fff',
+    color: Colors.textPrimary,
     fontSize: FontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: Spacing.md,
     marginTop: Spacing.sm,
   },
   infoCard: {
-    backgroundColor: '#333',
-    padding: Spacing.md,
-    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
     marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   label: {
-    color: '#b3b3b3',
+    color: Colors.textSecondary,
     fontSize: FontSize.sm,
     marginBottom: Spacing.xs,
     fontWeight: '600',
   },
   value: {
-    color: '#fff',
+    color: Colors.textPrimary,
     fontSize: FontSize.md,
+    fontWeight: '500',
   },
   inputGroup: {
     marginBottom: Spacing.xl,
   },
   input: {
-    backgroundColor: '#333',
-    color: '#fff',
-    borderRadius: 8,
+    backgroundColor: Colors.background,
+    color: Colors.textPrimary,
+    borderRadius: BorderRadius.sm,
     padding: Spacing.md,
     fontSize: FontSize.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   actionBtn: {
     marginTop: Spacing.xs,
   },
   divider: {
     height: 1,
-    backgroundColor: '#333',
-    marginVertical: Spacing.md,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.lg,
   },
 });
