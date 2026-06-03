@@ -110,31 +110,6 @@ cd MboaTune
 npm install
 ```
 
-### 2️⃣ Configuration Supabase
-
-#### A. Créer un projet Supabase
-1. Aller sur [supabase.com](https://supabase.com)
-2. Créer un nouveau projet
-3. Récupérer les clés :
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-
-#### B. Initialiser la base de données
-1. Aller à l'éditeur SQL dans Supabase
-2. Copier/coller le contenu de `supabase-setup.sql`
-3. Exécuter le script
-4. Vérifier que toutes les tables sont créées
-
-#### C. Configurer les variables d'environnement
-Créer un fichier `.env` à la racine :
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_anon_key_here
-```
-
-Ou modifier `src/lib/supabase.ts` directement.
-
 ### 3️⃣ Lancer l'application
 
 #### Android
@@ -164,8 +139,6 @@ Pour tester rapidement sans créer de compte :
 📧 Email :         juniorinfernal302@gmail.com
 🔑 Mot de passe :  test123456
 ```
-
-> ⚠️ **Note** : Assurez-vous que ce compte existe dans votre projet Supabase
 
 ---
 
