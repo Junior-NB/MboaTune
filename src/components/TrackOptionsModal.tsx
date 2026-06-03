@@ -45,14 +45,35 @@ export default function TrackOptionsModal({ track, visible, onClose, onDeleteImp
         return;
       }
 
-      const shareUrl = path.startsWith('file://') ? path : `file://${path}`;
+      // Créer un nom de fichier propre (Artiste - Titre.mp3)
+      const safeArtist = (track.artist?.name || 'Artiste inconnu').replace(/[^a-zA-Z0-9 \-]/g, '').trim();
+      const safeTitle = track.title.replace(/[^a-zA-Z0-9 \-]/g, '').trim();
+      const friendlyFileName = `${safeArtist} - ${safeTitle}.mp3`;
+      
+      const originalPath = path.replace('file://', '');
+      const tempPath = `${RNFS.CachesDirectoryPath}/${friendlyFileName}`;
+
+      // Copier le fichier avec le nouveau nom dans le dossier cache
+      if (await RNFS.exists(tempPath)) {
+        await RNFS.unlink(tempPath);
+      }
+      await RNFS.copyFile(originalPath, tempPath);
+
+      const shareUrl = `file://${tempPath}`;
 
       await Share.open({
         url: shareUrl,
         type: 'audio/mpeg',
         title: `Partager ${track.title}`,
+        filename: friendlyFileName.replace('.mp3', ''),
         message: `Écoute ce son : ${track.title} !`
       });
+
+      // Nettoyer le fichier temporaire après un court délai
+      setTimeout(() => {
+        RNFS.unlink(tempPath).catch(() => {});
+      }, 10000);
+
     } catch (e: any) {
       if (e.message !== 'User did not share') {
         Alert.alert('Erreur de partage', String(e.message || e));

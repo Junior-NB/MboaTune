@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors } from '../theme/colors';
 import { Spacing, FontSize } from '../theme/spacing';
 import { useAuthStore } from '../store/authStore';
+import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 const DRAWER_WIDTH = width * 0.8;
@@ -15,6 +16,7 @@ interface ProfileDrawerModalProps {
 
 export default function ProfileDrawerModal({ visible, onClose }: ProfileDrawerModalProps) {
   const { profile, signOut } = useAuthStore();
+  const navigation = useNavigation<any>();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -93,9 +95,9 @@ export default function ProfileDrawerModal({ visible, onClose }: ProfileDrawerMo
               <Text style={styles.menuText}>Récents</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); navigation.navigate('Settings'); }}>
               <Icon name="settings-outline" size={24} color={Colors.textPrimary} />
-              <Text style={styles.menuText}>Préférences et confidentialité</Text>
+              <Text style={styles.menuText}>Paramètres</Text>
             </TouchableOpacity>
             
             <View style={styles.divider} />

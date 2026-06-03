@@ -38,4 +38,5 @@ export type RootStackParamList = {
   PlaylistDetail: { playlistId: string };
   Album: { albumId: string };
   Artist: { artistId: string };
+  Settings: undefined;
 };

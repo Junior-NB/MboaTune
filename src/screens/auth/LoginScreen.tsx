@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const { signIn, signInWithGoogle, isLoading } = useAuthStore();
+  const { signIn, signInWithGoogle, signInWithGithub, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
     setErrorMsg('');
@@ -44,6 +44,15 @@ export default function LoginScreen() {
     if (error) {
       setErrorMsg(error);
       Alert.alert('Erreur Google', error);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setErrorMsg('');
+    const { error } = await signInWithGithub();
+    if (error) {
+      setErrorMsg(error);
+      Alert.alert('Erreur Github', error);
     }
   };
 
@@ -102,6 +111,11 @@ export default function LoginScreen() {
           <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
             <Icon name="logo-google" size={24} color="#DB4437" style={styles.googleIcon} />
             <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.googleButton} onPress={handleGithubLogin}>
+            <Icon name="logo-github" size={24} color="#333" style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continuer avec Github</Text>
           </TouchableOpacity>
 
           <Button 

@@ -20,6 +20,7 @@ interface AuthState {
   signUp: (email: string, password: string, username: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  signInWithGithub: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
@@ -159,6 +160,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error('❌ Google Sign-In Error:', error);
       return { error: error.message || 'Erreur lors de la connexion avec Google.' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  signInWithGithub: async () => {
+    try {
+      set({ isLoading: true });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: 'mboatune://auth'
+        }
+      });
+      if (error) return { error: error.message };
+      
+      if (data?.url) {
+        const { Linking } = require('react-native');
+        await Linking.openURL(data.url);
+      }
+      return {};
+    } catch (error: any) {
+      console.error('❌ Github Sign-In Error:', error);
+      return { error: error.message || 'Erreur lors de la connexion avec Github.' };
     } finally {
       set({ isLoading: false });
     }

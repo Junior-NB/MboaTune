@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, SafeAreaVi
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../../store/authStore';
+import { useLibraryStore } from '../../store/libraryStore';
 import { Colors } from '../../theme/colors';
 import { Spacing, FontSize, BorderRadius } from '../../theme/spacing';
 import Button from '../../components/Button';
+
+const ARTIST_COLORS = ['#1DB954', '#E8115B', '#FF6B35', '#4A90D9', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#10B981', '#F97316', '#6366F1', '#14B8A6'];
 
 const ARTISTS = [
   { id: '1', name: 'Fally Ipupa', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/FFALLY_IPUPA_ING.jpg/330px-FFALLY_IPUPA_ING.jpg' },
@@ -21,6 +24,27 @@ const ARTISTS = [
   { id: '11', name: 'Booba', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Festival_des_Vieilles_Charrues_2019_-_Booba_-_038.jpg/330px-Festival_des_Vieilles_Charrues_2019_-_Booba_-_038.jpg' },
   { id: '12', name: 'Ayra Starr', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Ayra_Starr_during_a_radio_interview_at_Ultima_Studios_in_Lekki%2C_Lagos_where_she_spoke_about_her_song_%22Commas%22._She_is_wearing_a_Honda%E2%80%93Supreme_top_%28cropped%29.jpg/330px-thumbnail.jpg' },
 ];
+
+function ArtistAvatar({ uri, name, index }: { uri: string; name: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  const color = ARTIST_COLORS[index % ARTIST_COLORS.length];
+
+  if (failed) {
+    return (
+      <View style={[styles.image, { backgroundColor: color, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>{name[0]}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.image}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function OnboardingScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -45,13 +69,12 @@ export default function OnboardingScreen() {
 
   const handleSkip = async () => {
     setLoading(true);
+    // Optimistic update : on ne bloque pas l'utilisateur
+    forceLocalSkip();
     try {
-      const result = await updateProfile({ onboarding_completed: true } as any);
-      if (result && result.error) {
-        forceLocalSkip();
-      }
+      await updateProfile({ onboarding_completed: true } as any);
     } catch (e) {
-      forceLocalSkip();
+      console.warn(e);
     } finally {
       setLoading(false);
     }
@@ -61,16 +84,26 @@ export default function OnboardingScreen() {
     if (selectedIds.length < 3) return;
     setLoading(true);
     
+    // 1. Sauvegarder les artistes sélectionnés en arrière-plan
+    const libraryStore = useLibraryStore.getState();
+    const user = useAuthStore.getState().user;
+    
+    if (user) {
+      // On sauvegarde sans bloquer la navigation
+      Promise.all(
+        selectedIds.map(artistId => 
+          libraryStore.toggleFollowArtist(artistId, user.id)
+        )
+      ).catch(console.error);
+    }
+
+    // 2. Optimistic update : on passe à l'écran principal immédiatement
+    forceLocalSkip();
+    
     try {
-      // Essayer de mettre à jour dans Supabase
-      const result = await updateProfile({ onboarding_completed: true } as any);
-      // Si Supabase échoue, on met à jour localement quand même
-      if (result && result.error) {
-        forceLocalSkip(); // Fallback
-      }
+      await updateProfile({ onboarding_completed: true } as any);
     } catch (e) {
       console.warn('Erreur lors de la mise à jour du profil onboarding:', e);
-      forceLocalSkip(); // Fallback
     } finally {
       setLoading(false);
     }
@@ -85,7 +118,7 @@ export default function OnboardingScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
-          {ARTISTS.map((artist) => {
+          {ARTISTS.map((artist, index) => {
             const isSelected = selectedIds.includes(artist.id);
             return (
               <TouchableOpacity
@@ -95,7 +128,7 @@ export default function OnboardingScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.imageContainer, isSelected && styles.imageContainerSelected]}>
-                  <Image source={{ uri: artist.image }} style={styles.image} />
+                  <ArtistAvatar uri={artist.image} name={artist.name} index={index} />
                   {isSelected && (
                     <View style={styles.overlay}>
                       <Icon name="checkmark-circle" size={32} color={Colors.primary} />
